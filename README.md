@@ -97,7 +97,7 @@ Full step-by-step (Supabase → Fly → Vercel → live check) is in
 - [x] **M1** — vertical slice (OpenAI provider + runner + fuzzy detection + citations + scoring + read API + React dashboard)
 - [ ] **M2** — prompt generation
 - [x] **M3** — LLM detection (recall + position + sentiment) + rolling 7/30-day windows
-- [ ] **M4** — scheduler + first deploy
+- [x] **M4** — Celery worker + beat (daily fan-out), retries, Fly worker/beat processes
 - [ ] **M5** — dashboard
 - [ ] **M6** — gap analysis + recommendations
 - [ ] **M7** — dogfood on Fly

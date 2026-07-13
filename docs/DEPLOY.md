@@ -7,7 +7,10 @@ This first deploy stands up the **API only**. The Celery worker + beat (the dail
 scheduler) and Upstash Redis are added in M4. For now you trigger runs manually
 over SSH — which also confirms the live OpenAI response shape.
 
-Order: **Supabase → Fly → Vercel → live check**.
+Order: **Supabase → Upstash → Fly → Vercel → live check**.
+
+Since M4, the Fly app runs **three process groups** — `app` (API), `worker`
+(Celery), `beat` (daily scheduler). The worker/beat groups need `REDIS_URL`.
 
 ---
 
@@ -34,7 +37,15 @@ Order: **Supabase → Fly → Vercel → live check**.
 
 ---
 
-## 2. Fly.io (backend API)
+## 1b. Upstash (Redis — Celery broker)
+
+1. Create a **Redis** database (free tier), region close to `us-east-1`.
+2. Copy the **`rediss://`** connection URL (TLS). That's `REDIS_URL`.
+   The Celery app auto-enables TLS when the URL starts with `rediss://`.
+
+---
+
+## 2. Fly.io (backend API + worker + beat)
 
 You can deploy either **from CI on git push** (recommended — no local flyctl) or
 **manually**.
@@ -52,7 +63,8 @@ You can deploy either **from CI on git push** (recommended — no local flyctl) 
    push a `backend/` change). It creates `limelight-geo` and deploys — the first
    deploy will start but the app has no secrets yet, so set them next.
 3. Set the app secrets in the **Fly dashboard** (`limelight-geo` → Secrets):
-   `OPENAI_API_KEY`, `DATABASE_URL`, `DATABASE_URL_DIRECT` (values from §1).
+   `OPENAI_API_KEY`, `ADMIN_TOKEN`, `REDIS_URL`, `DATABASE_URL`,
+   `DATABASE_URL_DIRECT` (values from §1 / §1b).
 4. Re-run the workflow. The `release_command` runs `alembic upgrade head`, then
    the API goes live.
 
@@ -75,6 +87,8 @@ fly apps create limelight-geo        # if the name is taken, pick another and up
 # Set secrets (never commit these). Paste your real values:
 fly secrets set \
   OPENAI_API_KEY="sk-..." \
+  ADMIN_TOKEN="<long-random-string>" \
+  REDIS_URL="rediss://default:<PW>@<host>.upstash.io:6379" \
   DATABASE_URL="postgresql+psycopg://postgres.<REF>:<PASSWORD>@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require" \
   DATABASE_URL_DIRECT="postgresql+psycopg://postgres.<REF>:<PASSWORD>@aws-0-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require"
 
@@ -138,4 +152,10 @@ and retry. (Send me the error / raw response and I'll adjust extraction.)
   couple seconds on first request). Fine for a dashboard; bump to `1` if you want
   it always warm.
 - **Secrets live only in Fly/Vercel**, never in git. `.env` is gitignored.
-- Worker/beat + Upstash Redis: added in M4 as extra Fly `[processes]`.
+- **Scheduler**: `worker` + `beat` process groups run continuously (they're not
+  http services, so autostop doesn't apply). `beat` fires `run_all_brands` daily
+  at 06:00 UTC, which enqueues a run per brand. Force one now with
+  `fly ssh console -C "python -m app.cli run-brand <id> --async"` (enqueues via
+  Celery) or trigger inline from the dashboard's "Run now".
+- **Cost**: 3 tiny always-on-ish machines. `app` autostops when idle; `worker`
+  and `beat` stay up for the schedule.

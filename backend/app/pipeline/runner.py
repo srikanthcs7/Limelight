@@ -105,5 +105,9 @@ def run_brand_prompts(
     )
     runs: list[Run] = []
     for pid in prompt_ids:
-        runs.append(run_single_prompt(db, pid, engine_key))
+        try:
+            runs.append(run_single_prompt(db, pid, engine_key))
+        except Exception as exc:  # noqa: BLE001
+            # One bad prompt must not sink the whole daily batch.
+            log_event(log, "run.failed", level=logging.ERROR, prompt_id=str(pid), error=str(exc))
     return runs
