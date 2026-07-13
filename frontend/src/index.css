@@ -376,6 +376,47 @@ select {
   border-bottom: none;
 }
 
+/* Gaps + recommendations */
+.gap-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.gap-ul {
+  margin: 4px 0 0;
+  padding-left: 18px;
+}
+.gap-ul li {
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+.recs {
+  margin-top: 16px;
+  background: var(--accent-weak);
+  border-radius: var(--radius-sm);
+  padding: 16px 16px 16px 8px;
+}
+.recs-title {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  margin: 0 0 8px 10px;
+}
+.recs-ol {
+  margin: 0;
+  padding-left: 28px;
+}
+.recs-ol li {
+  margin-bottom: 8px;
+  font-size: 14px;
+  line-height: 1.45;
+}
+
 .muted {
   color: var(--ink-3);
   font-size: 14px;

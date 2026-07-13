@@ -120,4 +120,8 @@ export const api = {
   shareOfVoice: (brandId: string) => get<ShareRow[]>(`/brands/${brandId}/share-of-voice`),
   sources: (brandId: string) => get<SourceRow[]>(`/brands/${brandId}/sources`),
   promptBreakdown: (brandId: string) => get<PromptRow[]>(`/brands/${brandId}/prompt-breakdown`),
+  gaps: (brandId: string) =>
+    get<{ prompt_gaps: PromptRow[]; source_gaps: SourceRow[] }>(`/brands/${brandId}/gaps`),
+  recommend: (brandId: string, token: string) =>
+    post<{ recommendations: string[] }>(`/brands/${brandId}/gaps/recommend`, token),
 };

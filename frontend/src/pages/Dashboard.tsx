@@ -5,6 +5,7 @@ import { VisibilityTrend } from "../charts/VisibilityTrend";
 import { CompetitorTable } from "../components/CompetitorTable";
 import { TopSources } from "../components/TopSources";
 import { PromptDrilldown } from "../components/PromptDrilldown";
+import { GapList } from "../components/GapList";
 
 export function Dashboard() {
   const qc = useQueryClient();
@@ -49,6 +50,12 @@ export function Dashboard() {
     queryFn: () => api.promptBreakdown(activeBrandId!),
     enabled: !!activeBrandId,
   });
+  const gapsQ = useQuery({
+    queryKey: ["gaps", activeBrandId],
+    queryFn: () => api.gaps(activeBrandId!),
+    enabled: !!activeBrandId,
+  });
+  const recommendM = useMutation({ mutationFn: () => api.recommend(activeBrandId!, token) });
 
   const saveToken = (v: string) => {
     setToken(v);
@@ -56,7 +63,7 @@ export function Dashboard() {
   };
 
   const refresh = () => {
-    for (const k of ["runs", "scores", "prompts", "sov", "sources", "breakdown"]) {
+    for (const k of ["runs", "scores", "prompts", "sov", "sources", "breakdown", "gaps"]) {
       qc.invalidateQueries({ queryKey: [k, activeBrandId] });
     }
   };
@@ -200,6 +207,22 @@ export function Dashboard() {
           <h2>Top cited sources</h2>
           <TopSources rows={sourcesQ.data ?? []} />
         </div>
+      </div>
+
+      <div className="card">
+        <h2>Gaps &amp; recommendations</h2>
+        <GapList
+          gaps={gapsQ.data?.prompt_gaps ?? []}
+          recommendations={recommendM.data?.recommendations ?? null}
+          onRecommend={() => recommendM.mutate()}
+          canRecommend={!!token && !busy}
+          loading={recommendM.isPending}
+        />
+        {recommendM.error && (
+          <div className="err" style={{ marginTop: 8 }}>
+            {String((recommendM.error as Error).message)}
+          </div>
+        )}
       </div>
 
       <div className="card">
