@@ -1,11 +1,15 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { VisibilityTrend } from "../charts/VisibilityTrend";
 
 export function Dashboard() {
+  const qc = useQueryClient();
   const brandsQ = useQuery({ queryKey: ["brands"], queryFn: api.brands });
   const [brandId, setBrandId] = useState<string | null>(null);
+  const [token, setToken] = useState<string>(
+    () => localStorage.getItem("limelight_admin_token") ?? "",
+  );
 
   const activeBrandId = brandId ?? brandsQ.data?.[0]?.id ?? null;
 
@@ -20,19 +24,60 @@ export function Dashboard() {
     enabled: !!activeBrandId,
   });
 
+  const saveToken = (v: string) => {
+    setToken(v);
+    localStorage.setItem("limelight_admin_token", v);
+  };
+
+  const seedM = useMutation({
+    mutationFn: () => api.seed(token),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["brands"] }),
+  });
+  const runM = useMutation({
+    mutationFn: () => api.triggerRun(activeBrandId!, token),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["runs", activeBrandId] });
+      qc.invalidateQueries({ queryKey: ["scores", activeBrandId] });
+    },
+  });
+
   const latest = scoresQ.data?.[scoresQ.data.length - 1];
   const brand = brandsQ.data?.find((b) => b.id === activeBrandId);
+  const noBrands = brandsQ.data && brandsQ.data.length === 0;
+  const busy = seedM.isPending || runM.isPending;
+  const error = seedM.error ?? runM.error;
 
   return (
     <div className="container">
       <h1>Limelight — AI Visibility Tracker</h1>
 
+      <div className="card admin-bar">
+        <input
+          type="password"
+          placeholder="Admin token"
+          value={token}
+          onChange={(e) => saveToken(e.target.value)}
+          style={{ minWidth: 220 }}
+        />
+        {noBrands && (
+          <button disabled={!token || busy} onClick={() => seedM.mutate()}>
+            {seedM.isPending ? "Seeding…" : "Seed GetQuizSolve"}
+          </button>
+        )}
+        {activeBrandId && (
+          <button disabled={!token || busy} onClick={() => runM.mutate()}>
+            {runM.isPending ? "Running… (~10–30s)" : "Run now"}
+          </button>
+        )}
+        {error && <span className="err">{String(error.message ?? error)}</span>}
+        {runM.isSuccess && !busy && (
+          <span className="ok">Ran {runM.data.runs} prompt(s).</span>
+        )}
+      </div>
+
       {brandsQ.isLoading && <p className="muted">Loading brands…</p>}
       {brandsQ.data && brandsQ.data.length > 0 && (
-        <select
-          value={activeBrandId ?? ""}
-          onChange={(e) => setBrandId(e.target.value)}
-        >
+        <select value={activeBrandId ?? ""} onChange={(e) => setBrandId(e.target.value)}>
           {brandsQ.data.map((b) => (
             <option key={b.id} value={b.id}>
               {b.display_name} ({b.domain})
@@ -66,9 +111,7 @@ export function Dashboard() {
 
       <div className="card">
         <h2>Recent runs</h2>
-        {runsQ.data && runsQ.data.length === 0 && (
-          <p className="muted">No runs yet.</p>
-        )}
+        {runsQ.data && runsQ.data.length === 0 && <p className="muted">No runs yet.</p>}
         {runsQ.data?.map((run) => (
           <div key={run.id} style={{ marginBottom: 16 }}>
             <div className="muted">{new Date(run.run_at).toLocaleString()}</div>

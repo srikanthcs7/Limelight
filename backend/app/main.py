@@ -4,7 +4,7 @@ from __future__ import annotations
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api import brands, runs, scores
+from app.api import admin, brands, runs, scores
 from app.config import get_settings
 
 settings = get_settings()
@@ -27,3 +27,4 @@ def health() -> dict[str, str]:
 app.include_router(brands.router)
 app.include_router(runs.router)
 app.include_router(scores.router)
+app.include_router(admin.router)

@@ -7,8 +7,11 @@ from fastapi import APIRouter, Depends
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
+from app.api.deps import require_admin
 from app.db import get_db
 from app.models import Prompt, Run
+from app.pipeline.runner import run_brand_prompts
+from app.pipeline.scoring import recompute_scores
 from app.schemas import RunOut
 
 router = APIRouter(prefix="/brands/{brand_id}/runs", tags=["runs"])
@@ -28,3 +31,15 @@ def list_runs(brand_id: uuid.UUID, limit: int = 50, db: Session = Depends(get_db
             .limit(limit)
         )
     )
+
+
+@router.post("", status_code=201, dependencies=[Depends(require_admin)])
+def trigger_run(brand_id: uuid.UUID, db: Session = Depends(get_db)) -> dict:
+    """Run all active prompts for the brand now (synchronous — takes ~10-30s per
+    prompt with web_search). Protected by the admin token. Bulk scheduling is the
+    Celery path (M4)."""
+    runs = run_brand_prompts(db, brand_id)
+    db.flush()
+    recompute_scores(db, brand_id)
+    db.commit()
+    return {"runs": len(runs)}

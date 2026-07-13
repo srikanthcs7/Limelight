@@ -23,3 +23,12 @@ h1 { font-size: 22px; }
 h2 { font-size: 16px; color: #333; }
 select { padding: 6px 10px; border-radius: 8px; border: 1px solid #ccc; }
 .muted { color: #888; font-size: 13px; }
+.admin-bar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.admin-bar input { padding: 6px 10px; border-radius: 8px; border: 1px solid #ccc; }
+.admin-bar button {
+  padding: 6px 14px; border-radius: 8px; border: none; cursor: pointer;
+  background: #5b3df5; color: #fff; font-weight: 600;
+}
+.admin-bar button:disabled { background: #bbb; cursor: not-allowed; }
+.err { color: #c0392b; font-size: 13px; }
+.ok { color: #1e824c; font-size: 13px; }

@@ -58,8 +58,28 @@ async function get<T>(path: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+async function post<T>(path: string, token: string): Promise<T> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers: { "X-Admin-Token": token },
+  });
+  if (!res.ok) {
+    let detail = `${res.status} ${res.statusText}`;
+    try {
+      detail = (await res.json()).detail ?? detail;
+    } catch {
+      /* keep default */
+    }
+    throw new Error(detail);
+  }
+  return res.json() as Promise<T>;
+}
+
 export const api = {
   brands: () => get<Brand[]>("/brands"),
   runs: (brandId: string) => get<Run[]>(`/brands/${brandId}/runs`),
   scores: (brandId: string) => get<Score[]>(`/brands/${brandId}/scores`),
+  seed: (token: string) => post<{ brand_id: string; display_name: string }>("/admin/seed", token),
+  triggerRun: (brandId: string, token: string) =>
+    post<{ runs: number }>(`/brands/${brandId}/runs`, token),
 };

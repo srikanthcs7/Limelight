@@ -30,7 +30,11 @@ def engine():
 def db(engine):
     connection = engine.connect()
     txn = connection.begin()
-    Session = sessionmaker(bind=connection, expire_on_commit=False)
+    # create_savepoint => the endpoints' db.commit() releases a SAVEPOINT instead
+    # of committing the outer transaction, so teardown can still roll everything back.
+    Session = sessionmaker(
+        bind=connection, expire_on_commit=False, join_transaction_mode="create_savepoint"
+    )
     session = Session()
     try:
         yield session

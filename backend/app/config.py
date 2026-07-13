@@ -23,6 +23,9 @@ class Settings(BaseSettings):
 
     # API
     cors_origins: str = "http://localhost:5173"
+    # Shared secret gating write endpoints (seed, trigger run). If empty, writes
+    # are disabled (503). Sent by the client as the X-Admin-Token header.
+    admin_token: str = ""
 
     @property
     def alembic_url(self) -> str:
