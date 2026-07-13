@@ -36,6 +36,21 @@ Order: **Supabase → Fly → Vercel → live check**.
 
 ## 2. Fly.io (backend API)
 
+You can deploy either **from CI on git push** (recommended — no local flyctl) or
+**manually**.
+
+### Option A — deploy via GitHub Actions (push-to-deploy)
+`.github/workflows/fly-deploy.yml` runs `flyctl deploy` on every push touching
+`backend/`. One-time setup:
+1. Create the app: `fly apps create limelight-api` (or via the Fly dashboard).
+2. Generate a deploy token: `fly tokens create deploy -a limelight-api`, then add
+   it as repo secret **`FLY_API_TOKEN`** (GitHub → Settings → Secrets → Actions).
+3. Set the app secrets in the **Fly dashboard** (app → Secrets):
+   `OPENAI_API_KEY`, `DATABASE_URL`, `DATABASE_URL_DIRECT` (values from §1).
+4. Push (or run the workflow manually via **Actions → Deploy backend to Fly →
+   Run workflow**). CI deploys and runs migrations.
+
+### Option B — deploy manually
 From the repo root:
 
 ```bash
