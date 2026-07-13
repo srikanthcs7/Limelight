@@ -1,0 +1,45 @@
+# Fly.io config for the Limelight backend API.
+# Deploy from this directory:  cd backend && fly deploy
+#
+# This deploy runs the API process only. The Celery worker + beat (the daily
+# scheduler) are added in M4 as extra [processes] once they exist and Upstash
+# Redis is wired up.
+app = "limelight-api"
+primary_region = "iad"
+
+[build]
+  dockerfile = "Dockerfile"
+
+# Non-secret config. Secrets (OPENAI_API_KEY, DATABASE_URL, DATABASE_URL_DIRECT)
+# are set with `fly secrets set` — never put them here.
+[env]
+  # Update this to your Vercel URL after the frontend deploys, then redeploy
+  # (or override with: fly secrets set CORS_ORIGINS="https://<project>.vercel.app").
+  CORS_ORIGINS = "https://limelight.vercel.app"
+
+# Run DB migrations on every deploy, before the new machines go live.
+# alembic uses DATABASE_URL_DIRECT (Supabase direct connection, port 5432).
+[deploy]
+  release_command = "alembic upgrade head"
+
+[http_service]
+  internal_port = 8000
+  force_https = true
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+  processes = ["app"]
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/health"
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "10s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"
+
+[processes]
+  app = "uvicorn app.main:app --host 0.0.0.0 --port 8000"

@@ -85,9 +85,11 @@ uvicorn app.main:app --reload
 
 ## Deployment (Fly.io + Supabase + Upstash)
 
-Three Fly process groups (`api` / `worker` / `beat`) run the same Docker image;
-Postgres is Supabase (pooled URL for the app, direct URL for Alembic), Redis is
-Upstash. Secrets via `fly secrets set`. See the build plan for details.
+Backend → Fly.io (`limelight-api`, region `iad`), DB → Supabase Postgres, frontend
+→ Vercel. The first deploy is API-only; worker/beat + Upstash Redis land with M4.
+Full step-by-step (Supabase → Fly → Vercel → live check) is in
+[`docs/DEPLOY.md`](docs/DEPLOY.md). Config lives in `backend/fly.toml` and
+`frontend/vercel.json`.
 
 ## Status
 
