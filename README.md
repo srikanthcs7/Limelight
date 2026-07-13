@@ -96,7 +96,7 @@ Full step-by-step (Supabase → Fly → Vercel → live check) is in
 - [x] **M0** — scaffold, models, migration, seed, FastAPI skeleton, CLI
 - [x] **M1** — vertical slice (OpenAI provider + runner + fuzzy detection + citations + scoring + read API + React dashboard)
 - [ ] **M2** — prompt generation
-- [ ] **M3** — full detection + scoring
+- [x] **M3** — LLM detection (recall + position + sentiment) + rolling 7/30-day windows
 - [ ] **M4** — scheduler + first deploy
 - [ ] **M5** — dashboard
 - [ ] **M6** — gap analysis + recommendations

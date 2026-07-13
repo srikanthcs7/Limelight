@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from app.logging_config import log_event
 from app.models import Brand, Citation, Competitor, Engine, Mention, Prompt, Run
 from app.pipeline.citations import dedupe_citations
-from app.pipeline.detection import Entity, detect_mentions
+from app.pipeline.detection import Entity, detect
 from app.providers.registry import get_provider
 
 DEFAULT_ENGINE_KEY = "openai"  # Phase 1 is single-engine.
@@ -61,7 +61,7 @@ def run_single_prompt(
     db.add(run)
     db.flush()  # assign run.id
 
-    mentions = detect_mentions(result.answer_text, _entities_for_brand(db, brand))
+    mentions = detect(result.answer_text, _entities_for_brand(db, brand))
     for m in mentions:
         db.add(
             Mention(
@@ -71,6 +71,7 @@ def run_single_prompt(
                 is_tracked_brand=m.is_tracked_brand,
                 position=m.position,
                 prominence=m.prominence,
+                sentiment=m.sentiment,
             )
         )
 

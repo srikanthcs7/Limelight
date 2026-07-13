@@ -43,6 +43,7 @@ export interface Run {
 }
 
 export interface Score {
+  window_label: string; // 'all' | '7d' | '30d'
   window_start: string;
   window_end: string;
   visibility_score: number;

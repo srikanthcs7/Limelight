@@ -72,6 +72,7 @@ class RunOut(BaseModel):
 class ScoreOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
+    window_label: str  # 'all' | '7d' | '30d'
     window_start: datetime
     window_end: datetime
     visibility_score: float

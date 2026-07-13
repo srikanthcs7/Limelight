@@ -11,6 +11,7 @@ export function Dashboard() {
     () => localStorage.getItem("limelight_admin_token") ?? "",
   );
   const [showSettings, setShowSettings] = useState(false);
+  const [win, setWin] = useState<"7d" | "30d" | "all">("7d");
 
   const activeBrandId = brandId ?? brandsQ.data?.[0]?.id ?? null;
   const brand = brandsQ.data?.find((b) => b.id === activeBrandId);
@@ -52,7 +53,10 @@ export function Dashboard() {
     onSuccess: refresh,
   });
 
-  const latest = scoresQ.data?.[scoresQ.data.length - 1];
+  const windowScores = (scoresQ.data ?? [])
+    .filter((s) => s.window_label === win)
+    .sort((a, b) => a.window_end.localeCompare(b.window_end));
+  const latest = windowScores[windowScores.length - 1];
   const noBrands = brandsQ.data && brandsQ.data.length === 0;
   const busy = seedM.isPending || runM.isPending || genM.isPending;
   const error = seedM.error ?? runM.error ?? genM.error;
@@ -130,7 +134,20 @@ export function Dashboard() {
       )}
 
       <div className="card">
-        <h2>Visibility score</h2>
+        <div className="card-head">
+          <h2>Visibility score</h2>
+          <div className="segmented">
+            {(["7d", "30d", "all"] as const).map((w) => (
+              <button
+                key={w}
+                className={win === w ? "seg active" : "seg"}
+                onClick={() => setWin(w)}
+              >
+                {w === "all" ? "All" : w}
+              </button>
+            ))}
+          </div>
+        </div>
         <div className="hero">
           <span className="hero-score">{latest ? latest.visibility_score : "—"}</span>
           <span className="hero-out-of">/ 100</span>
@@ -152,8 +169,8 @@ export function Dashboard() {
       </div>
 
       <div className="card">
-        <h2>Visibility over time</h2>
-        <VisibilityTrend scores={scoresQ.data ?? []} />
+        <h2>Visibility over time · {win === "all" ? "all-time" : win}</h2>
+        <VisibilityTrend scores={windowScores} />
       </div>
 
       <div className="card">
@@ -167,6 +184,7 @@ export function Dashboard() {
               {run.mentions.length === 0 && <span className="muted">No tracked brands mentioned</span>}
               {run.mentions.map((m) => (
                 <span key={m.entity_name} className={m.is_tracked_brand ? "chip brand" : "chip"}>
+                  {m.sentiment && <i className={`sdot ${m.sentiment}`} />}
                   {m.entity_name} · #{m.position}
                 </span>
               ))}

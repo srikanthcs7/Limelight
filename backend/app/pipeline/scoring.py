@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, time, timezone
+from datetime import datetime, time, timedelta, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -110,14 +110,24 @@ def _run_ids_in_window(
     return list(db.scalars(stmt))
 
 
-def recompute_scores(
+EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
+# Standard windows recomputed each day: label -> trailing days (None = all-time).
+STANDARD_WINDOWS: list[tuple[str, int | None]] = [("all", None), ("30d", 30), ("7d", 7)]
+
+
+def _end_of_today() -> datetime:
+    return datetime.combine(datetime.now(timezone.utc).date(), time.max, tzinfo=timezone.utc)
+
+
+def recompute_window(
     db: Session,
     brand_id: uuid.UUID,
-    engine_key: str = "openai",
-    window_start: datetime | None = None,
-    window_end: datetime | None = None,
+    engine_key: str,
+    window_start: datetime | None,
+    window_end: datetime,
 ) -> dict:
-    """Recompute and upsert one Score row for the given window (default all-time)."""
+    """Recompute and upsert ONE Score row for an explicit window. window_start
+    None => all-time (epoch sentinel)."""
     from app.models import Score  # local import avoids a cycle at module load
 
     brand = db.get(Brand, brand_id)
@@ -127,18 +137,10 @@ def recompute_scores(
     if engine is None:
         raise ValueError(f"engine {engine_key!r} not seeded")
 
-    # Floor the default window_end to end-of-day (UTC) so repeated recomputes on
-    # the same day UPSERT one row instead of piling up a new point per read.
-    # Result: one cumulative visibility point per day (M3 adds rolling windows).
-    if window_end is None:
-        today = datetime.now(timezone.utc).date()
-        window_end = datetime.combine(today, time.max, tzinfo=timezone.utc)
     run_ids = _run_ids_in_window(db, brand_id, engine.id, window_start, window_end)
     comp = compute_components(db, brand, run_ids)
 
-    # Upsert on (brand, engine, window). window_start=None -> epoch sentinel so the
-    # unique constraint has a concrete value for the all-time window.
-    ws = window_start or datetime(1970, 1, 1, tzinfo=timezone.utc)
+    ws = window_start or EPOCH
     existing = db.scalar(
         select(Score).where(
             Score.brand_id == brand_id,
@@ -148,9 +150,7 @@ def recompute_scores(
         )
     )
     if existing is None:
-        existing = Score(
-            brand_id=brand_id, engine_id=engine.id, window_start=ws, window_end=window_end
-        )
+        existing = Score(brand_id=brand_id, engine_id=engine.id, window_start=ws, window_end=window_end)
         db.add(existing)
     existing.visibility_score = comp.visibility_score
     existing.share_of_voice = comp.share_of_voice
@@ -166,3 +166,17 @@ def recompute_scores(
         "citation_rate": comp.citation_rate,
         "prominence_weight": comp.prominence_weight,
     }
+
+
+def recompute_scores(db: Session, brand_id: uuid.UUID, engine_key: str = "openai") -> dict:
+    """Recompute & upsert all STANDARD_WINDOWS ending end-of-today. Returns a dict
+    keyed by window label. Each 7d/30d row's window_start moves daily, so days
+    accumulate into a real trend series; the all-time row upserts per day."""
+    end = _end_of_today()
+    out: dict[str, dict] = {}
+    for label, days in STANDARD_WINDOWS:
+        start = None if days is None else datetime.combine(
+            end.date() - timedelta(days=days), time.min, tzinfo=timezone.utc
+        )
+        out[label] = recompute_window(db, brand_id, engine_key, start, end)
+    return out

@@ -9,7 +9,6 @@ persistence + validation logic is unit-testable with fixtures.
 """
 from __future__ import annotations
 
-import json
 import logging
 from dataclasses import dataclass, field
 
@@ -18,7 +17,6 @@ import trafilatura
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.config import get_settings
 from app.logging_config import log_event
 from app.models import Brand, Competitor, Prompt
 
@@ -62,17 +60,10 @@ def scrape_site(domain: str, max_chars: int = 6000) -> str:
 
 
 def _complete_json(system: str, user: str) -> dict:
-    """Call the OpenAI intel model in JSON mode and parse the object."""
-    from openai import OpenAI
+    """Call the intel model in JSON mode (thin wrapper over app.llm)."""
+    from app import llm
 
-    settings = get_settings()
-    client = OpenAI(api_key=settings.openai_api_key)
-    resp = client.chat.completions.create(
-        model=settings.openai_intel_model,
-        response_format={"type": "json_object"},
-        messages=[{"role": "system", "content": system}, {"role": "user", "content": user}],
-    )
-    return json.loads(resp.choices[0].message.content or "{}")
+    return llm.complete_json(system, user)
 
 
 # --- pure logic ----------------------------------------------------------------------
