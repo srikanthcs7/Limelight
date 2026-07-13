@@ -14,7 +14,7 @@ import typer
 from sqlalchemy import select
 
 from app.db import session_scope
-from app.models import Brand, Citation, Mention, Prompt, Run
+from app.models import Citation, Mention, Prompt, Run
 from app.seed import seed_getquizsolve
 
 app = typer.Typer(help="Limelight — AI Visibility Tracker CLI")

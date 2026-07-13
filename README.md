@@ -92,7 +92,7 @@ Upstash. Secrets via `fly secrets set`. See the build plan for details.
 ## Status
 
 - [x] **M0** — scaffold, models, migration, seed, FastAPI skeleton, CLI
-- [ ] **M1** — vertical slice (OpenAI provider + runner + detection + storage)
+- [x] **M1** — vertical slice (OpenAI provider + runner + fuzzy detection + citations + scoring + read API + React dashboard)
 - [ ] **M2** — prompt generation
 - [ ] **M3** — full detection + scoring
 - [ ] **M4** — scheduler + first deploy

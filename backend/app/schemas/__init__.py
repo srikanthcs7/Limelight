@@ -26,3 +26,46 @@ class BrandOut(BaseModel):
     category: str | None
     created_at: datetime
     competitors: list[CompetitorOut] = []
+
+
+class MentionOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    entity_type: str
+    entity_name: str
+    is_tracked_brand: bool
+    position: int | None
+    prominence: float | None
+    sentiment: str | None
+
+
+class CitationOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    url: str
+    domain: str
+    source_type: str | None
+
+
+class RunOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    prompt_id: uuid.UUID
+    engine_id: int
+    run_at: datetime
+    answer_text: str
+    mentions: list[MentionOut] = []
+    citations: list[CitationOut] = []
+
+
+class ScoreOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    window_start: datetime
+    window_end: datetime
+    visibility_score: float
+    share_of_voice: float
+    mention_rate: float
+    citation_rate: float
+    computed_at: datetime
