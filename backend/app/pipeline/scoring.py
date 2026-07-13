@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import uuid
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import datetime, time, timezone
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
@@ -127,7 +127,12 @@ def recompute_scores(
     if engine is None:
         raise ValueError(f"engine {engine_key!r} not seeded")
 
-    window_end = window_end or datetime.now(timezone.utc)
+    # Floor the default window_end to end-of-day (UTC) so repeated recomputes on
+    # the same day UPSERT one row instead of piling up a new point per read.
+    # Result: one cumulative visibility point per day (M3 adds rolling windows).
+    if window_end is None:
+        today = datetime.now(timezone.utc).date()
+        window_end = datetime.combine(today, time.max, tzinfo=timezone.utc)
     run_ids = _run_ids_in_window(db, brand_id, engine.id, window_start, window_end)
     comp = compute_components(db, brand, run_ids)
 

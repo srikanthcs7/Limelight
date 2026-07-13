@@ -65,3 +65,16 @@ def test_runs_are_append_only(db, monkeypatch):
 
     total = db.query(Run).count()
     assert total == 2  # appended, not overwritten
+
+
+def test_scores_upsert_same_day(db, monkeypatch):
+    from app.models import Score
+
+    monkeypatch.setattr(runner_mod, "get_provider", lambda key: _FakeProvider())
+    brand = seed_getquizsolve(db)
+    run_brand_prompts(db, brand.id)
+
+    recompute_scores(db, brand.id)
+    recompute_scores(db, brand.id)  # same day -> should upsert, not add a row
+
+    assert db.query(Score).filter(Score.brand_id == brand.id).count() == 1

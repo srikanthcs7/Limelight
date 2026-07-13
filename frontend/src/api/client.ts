@@ -75,11 +75,22 @@ async function post<T>(path: string, token: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export interface Prompt {
+  id: string;
+  text: string;
+  intent_type: string | null;
+  active: boolean;
+  created_at: string;
+}
+
 export const api = {
   brands: () => get<Brand[]>("/brands"),
   runs: (brandId: string) => get<Run[]>(`/brands/${brandId}/runs`),
   scores: (brandId: string) => get<Score[]>(`/brands/${brandId}/scores`),
+  prompts: (brandId: string) => get<Prompt[]>(`/brands/${brandId}/prompts`),
   seed: (token: string) => post<{ brand_id: string; display_name: string }>("/admin/seed", token),
   triggerRun: (brandId: string, token: string) =>
     post<{ runs: number }>(`/brands/${brandId}/runs`, token),
+  generatePrompts: (brandId: string, token: string) =>
+    post<{ added_prompts: number }>(`/brands/${brandId}/prompts:generate`, token),
 };
