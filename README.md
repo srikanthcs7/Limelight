@@ -100,4 +100,10 @@ Full step-by-step (Supabase → Fly → Vercel → live check) is in
 - [x] **M4** — Celery worker + beat (daily fan-out), retries, Fly worker/beat processes
 - [x] **M5** — dashboard depth (share-of-voice, top sources, prompt breakdown, window toggle)
 - [x] **M6** — gap analysis (prompt gaps, source gaps) + LLM recommendations
-- [ ] **M7** — dogfood on Fly
+- [x] **M7** — dogfood loop on Fly (runbook: `docs/DOGFOOD.md`)
+
+**Phase 1 complete.** Full pipeline runs on OpenAI/ChatGPT end-to-end: prompt
+generation → search-grounded runs → LLM detection → scoring (7/30-day/all) →
+dashboard (trend, share-of-voice, sources, prompt breakdown, gaps + AI
+recommendations) → daily automation. Next: **Phase 2** — Google AI Overviews +
+Gemini adapters behind the same `EngineProvider` interface.
