@@ -7,17 +7,21 @@ normalized EngineResult. It never imports a specific provider.
 """
 from __future__ import annotations
 
+import logging
 import uuid
 
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.logging_config import log_event
 from app.models import Brand, Citation, Competitor, Engine, Mention, Prompt, Run
 from app.pipeline.citations import dedupe_citations
 from app.pipeline.detection import Entity, detect_mentions
 from app.providers.registry import get_provider
 
 DEFAULT_ENGINE_KEY = "openai"  # Phase 1 is single-engine.
+
+log = logging.getLogger("limelight.runner")
 
 
 def _entities_for_brand(db: Session, brand: Brand) -> list[Entity]:
@@ -57,7 +61,8 @@ def run_single_prompt(
     db.add(run)
     db.flush()  # assign run.id
 
-    for m in detect_mentions(result.answer_text, _entities_for_brand(db, brand)):
+    mentions = detect_mentions(result.answer_text, _entities_for_brand(db, brand))
+    for m in mentions:
         db.add(
             Mention(
                 run_id=run.id,
@@ -69,10 +74,22 @@ def run_single_prompt(
             )
         )
 
-    for c in dedupe_citations(result.cited_urls):
+    citations = dedupe_citations(result.cited_urls)
+    for c in citations:
         db.add(Citation(run_id=run.id, url=c.url, domain=c.domain))
 
     db.flush()
+    log_event(
+        log,
+        "run.completed",
+        run_id=str(run.id),
+        prompt_id=str(prompt.id),
+        engine=engine_key,
+        brand=brand.display_name,
+        brand_mentioned=any(m.is_tracked_brand for m in mentions),
+        mentions=len(mentions),
+        citations=len(citations),
+    )
     return run
 
 

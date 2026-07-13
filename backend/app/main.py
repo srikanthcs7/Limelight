@@ -6,7 +6,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api import admin, brands, runs, scores
 from app.config import get_settings
+from app.logging_config import configure_logging
 
+configure_logging()
 settings = get_settings()
 
 app = FastAPI(title="Limelight — AI Visibility Tracker", version="0.1.0")

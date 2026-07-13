@@ -9,13 +9,25 @@ call, dumps the response to a dict, and hands it to the helper.
 """
 from __future__ import annotations
 
+import logging
 from typing import Any
 from urllib.parse import urlparse
 
 import tldextract
 
 from app.config import get_settings
+from app.logging_config import log_event
 from app.providers.base import CitedUrl, EngineResult
+
+log = logging.getLogger("limelight.provider.openai")
+
+# Nudges the model to actually search + ground its answer, so runs carry real
+# citations rather than answering from training memory.
+GROUNDING_INSTRUCTIONS = (
+    "You are answering as a current, web-connected AI assistant. Use the web "
+    "search tool to find up-to-date information and base your answer on real "
+    "sources you looked up."
+)
 
 
 def domain_of(url: str) -> str:
@@ -41,16 +53,46 @@ def _answer_text(raw: dict[str, Any]) -> str:
 
 
 def _cited_urls(raw: dict[str, Any]) -> list[CitedUrl]:
-    """Collect url_citation annotations from message content (first-seen order)."""
+    """Collect cited URLs (first-seen order) from two places:
+    1. `url_citation` annotations on the assistant message content, and
+    2. any `sources`/`results` carried on a `web_search_call` item (defensive —
+       shape varies across SDK versions)."""
     urls: list[CitedUrl] = []
+
+    def add(u: str | None) -> None:
+        if u:
+            urls.append(CitedUrl(url=u, domain=domain_of(u)))
+
     for item in raw.get("output", []) or []:
-        if item.get("type") != "message":
-            continue
-        for content in item.get("content", []) or []:
-            for ann in content.get("annotations", []) or []:
-                if ann.get("type") == "url_citation" and ann.get("url"):
-                    urls.append(CitedUrl(url=ann["url"], domain=domain_of(ann["url"])))
+        itype = item.get("type")
+        if itype == "message":
+            for content in item.get("content", []) or []:
+                for ann in content.get("annotations", []) or []:
+                    if ann.get("type") == "url_citation":
+                        add(ann.get("url"))
+        elif itype == "web_search_call":
+            action = item.get("action") or {}
+            for src in (action.get("sources") or item.get("sources") or item.get("results") or []):
+                if isinstance(src, dict):
+                    add(src.get("url"))
     return urls
+
+
+def diagnostics(raw: dict[str, Any]) -> dict[str, Any]:
+    """Summary of what the API actually returned — logged so we can see whether
+    web_search fired and citations came back, without dumping the full payload."""
+    output = raw.get("output", []) or []
+    item_types = [i.get("type") for i in output]
+    annotations = 0
+    for item in output:
+        if item.get("type") == "message":
+            for content in item.get("content", []) or []:
+                annotations += len(content.get("annotations", []) or [])
+    return {
+        "output_item_types": item_types,
+        "web_search_invoked": "web_search_call" in item_types,
+        "annotation_count": annotations,
+    }
 
 
 def extract_engine_result(raw: dict[str, Any]) -> EngineResult:
@@ -74,7 +116,19 @@ class OpenAIProvider:
         response = client.responses.create(
             model=self._model,
             input=prompt,
+            instructions=GROUNDING_INSTRUCTIONS,
             tools=[{"type": "web_search"}],
             tool_choice="auto",
         )
-        return extract_engine_result(response.model_dump())
+        raw = response.model_dump()
+        result = extract_engine_result(raw)
+        log_event(
+            log,
+            "provider.openai.run",
+            model=self._model,
+            prompt_preview=prompt[:120],
+            answer_len=len(result.answer_text),
+            citations=len(result.cited_urls),
+            **diagnostics(raw),
+        )
+        return result
