@@ -306,6 +306,76 @@ select {
   margin-top: 10px;
 }
 
+/* Two-column grid (share-of-voice + sources) */
+.grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+}
+.grid-2 .card {
+  margin-bottom: 0;
+}
+
+/* Share of voice bars */
+.sov-row {
+  display: grid;
+  grid-template-columns: 120px 1fr 40px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.sov-name {
+  font-size: 13px;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.sov-bar-track {
+  background: var(--surface-2);
+  border-radius: 980px;
+  height: 8px;
+  overflow: hidden;
+}
+.sov-bar {
+  height: 100%;
+  border-radius: 980px;
+  background: var(--ink-3);
+}
+.sov-bar.brand {
+  background: var(--accent);
+}
+.sov-val {
+  font-size: 12px;
+  color: var(--ink-3);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Tables */
+.tbl {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.tbl th {
+  text-align: left;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--ink-3);
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.tbl td {
+  padding: 10px 8px;
+  border-bottom: 1px solid var(--border);
+  color: var(--ink);
+  vertical-align: top;
+}
+.tbl tr:last-child td {
+  border-bottom: none;
+}
+
 .muted {
   color: var(--ink-3);
   font-size: 14px;
@@ -335,6 +405,9 @@ select {
 
 @media (max-width: 560px) {
   .kpis {
+    grid-template-columns: 1fr;
+  }
+  .grid-2 {
     grid-template-columns: 1fr;
   }
   .hero-score {

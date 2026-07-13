@@ -84,6 +84,29 @@ export interface Prompt {
   created_at: string;
 }
 
+export interface ShareRow {
+  entity_name: string;
+  is_tracked_brand: boolean;
+  mentions: number;
+  share: number;
+}
+
+export interface SourceRow {
+  domain: string;
+  citations: number;
+}
+
+export interface PromptRow {
+  prompt_id: string;
+  text: string;
+  intent_type: string | null;
+  runs_count: number;
+  last_run_at: string | null;
+  brand_mentioned: boolean;
+  position: number | null;
+  competitors_present: string[];
+}
+
 export const api = {
   brands: () => get<Brand[]>("/brands"),
   runs: (brandId: string) => get<Run[]>(`/brands/${brandId}/runs`),
@@ -94,4 +117,7 @@ export const api = {
     post<{ runs: number }>(`/brands/${brandId}/runs`, token),
   generatePrompts: (brandId: string, token: string) =>
     post<{ added_prompts: number }>(`/brands/${brandId}/prompts:generate`, token),
+  shareOfVoice: (brandId: string) => get<ShareRow[]>(`/brands/${brandId}/share-of-voice`),
+  sources: (brandId: string) => get<SourceRow[]>(`/brands/${brandId}/sources`),
+  promptBreakdown: (brandId: string) => get<PromptRow[]>(`/brands/${brandId}/prompt-breakdown`),
 };

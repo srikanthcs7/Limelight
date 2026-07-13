@@ -98,6 +98,6 @@ Full step-by-step (Supabase → Fly → Vercel → live check) is in
 - [ ] **M2** — prompt generation
 - [x] **M3** — LLM detection (recall + position + sentiment) + rolling 7/30-day windows
 - [x] **M4** — Celery worker + beat (daily fan-out), retries, Fly worker/beat processes
-- [ ] **M5** — dashboard
+- [x] **M5** — dashboard depth (share-of-voice, top sources, prompt breakdown, window toggle)
 - [ ] **M6** — gap analysis + recommendations
 - [ ] **M7** — dogfood on Fly

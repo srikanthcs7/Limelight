@@ -2,6 +2,9 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { VisibilityTrend } from "../charts/VisibilityTrend";
+import { CompetitorTable } from "../components/CompetitorTable";
+import { TopSources } from "../components/TopSources";
+import { PromptDrilldown } from "../components/PromptDrilldown";
 
 export function Dashboard() {
   const qc = useQueryClient();
@@ -31,6 +34,21 @@ export function Dashboard() {
     queryFn: () => api.prompts(activeBrandId!),
     enabled: !!activeBrandId,
   });
+  const sovQ = useQuery({
+    queryKey: ["sov", activeBrandId],
+    queryFn: () => api.shareOfVoice(activeBrandId!),
+    enabled: !!activeBrandId,
+  });
+  const sourcesQ = useQuery({
+    queryKey: ["sources", activeBrandId],
+    queryFn: () => api.sources(activeBrandId!),
+    enabled: !!activeBrandId,
+  });
+  const breakdownQ = useQuery({
+    queryKey: ["breakdown", activeBrandId],
+    queryFn: () => api.promptBreakdown(activeBrandId!),
+    enabled: !!activeBrandId,
+  });
 
   const saveToken = (v: string) => {
     setToken(v);
@@ -38,9 +56,9 @@ export function Dashboard() {
   };
 
   const refresh = () => {
-    qc.invalidateQueries({ queryKey: ["runs", activeBrandId] });
-    qc.invalidateQueries({ queryKey: ["scores", activeBrandId] });
-    qc.invalidateQueries({ queryKey: ["prompts", activeBrandId] });
+    for (const k of ["runs", "scores", "prompts", "sov", "sources", "breakdown"]) {
+      qc.invalidateQueries({ queryKey: [k, activeBrandId] });
+    }
   };
 
   const seedM = useMutation({
@@ -171,6 +189,22 @@ export function Dashboard() {
       <div className="card">
         <h2>Visibility over time · {win === "all" ? "all-time" : win}</h2>
         <VisibilityTrend scores={windowScores} />
+      </div>
+
+      <div className="grid-2">
+        <div className="card">
+          <h2>Share of voice</h2>
+          <CompetitorTable rows={sovQ.data ?? []} />
+        </div>
+        <div className="card">
+          <h2>Top cited sources</h2>
+          <TopSources rows={sourcesQ.data ?? []} />
+        </div>
+      </div>
+
+      <div className="card">
+        <h2>Prompt breakdown</h2>
+        <PromptDrilldown rows={breakdownQ.data ?? []} />
       </div>
 
       <div className="card">

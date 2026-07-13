@@ -20,7 +20,9 @@ router = APIRouter(prefix="/brands/{brand_id}/scores", tags=["scores"])
 def _label(score: Score) -> str:
     if score.window_start <= EPOCH:
         return "all"
-    days = round((score.window_end - score.window_start).total_seconds() / 86400)
+    # Use whole-date difference: window_start is 00:00 and window_end is 23:59:59,
+    # so a seconds-based delta rounds up by one day.
+    days = (score.window_end.date() - score.window_start.date()).days
     return f"{days}d"
 
 
