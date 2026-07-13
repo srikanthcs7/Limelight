@@ -99,6 +99,16 @@ def run_brand(brand_id: str, use_async: bool = typer.Option(False, "--async")) -
         typer.echo(f"stored {len(runs)} run(s) for brand {bid}")
 
 
+@app.command("gen-prompts")
+def gen_prompts(brand_id: str, target: int = 60) -> None:
+    """Scrape the brand's domain and generate buyer prompts across intent types."""
+    from app.pipeline.prompt_gen import generate_for_brand
+
+    with session_scope() as db:
+        summary = generate_for_brand(db, uuid.UUID(brand_id), target=target)
+        typer.echo(f"generated: {summary}")
+
+
 @app.command()
 def score(brand_id: str) -> None:
     """Recompute scores for a brand's window. (Implemented in M3.)"""

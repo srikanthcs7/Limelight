@@ -28,6 +28,16 @@ class BrandOut(BaseModel):
     competitors: list[CompetitorOut] = []
 
 
+class PromptOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    text: str
+    intent_type: str | None
+    active: bool
+    created_at: datetime
+
+
 class MentionOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
