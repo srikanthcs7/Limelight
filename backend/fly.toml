@@ -4,7 +4,7 @@
 # This deploy runs the API process only. The Celery worker + beat (the daily
 # scheduler) are added in M4 as extra [processes] once they exist and Upstash
 # Redis is wired up.
-app = "limelight-api"
+app = "limelight-geo"
 primary_region = "iad"
 
 [build]

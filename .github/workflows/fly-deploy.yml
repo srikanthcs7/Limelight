@@ -2,14 +2,16 @@ name: Deploy backend to Fly
 
 # Deploys the FastAPI backend to Fly on every push that touches backend/.
 # Runs on GitHub's runners (which have network access to Fly), so no local
-# flyctl or egress is needed.
+# flyctl or egress is needed. CI also creates the app on first run.
 #
 # One-time setup:
-#   1. `fly apps create limelight-api`  (or create it in the Fly dashboard)
-#   2. Add repo secret FLY_API_TOKEN  (GitHub → Settings → Secrets → Actions).
-#      Generate with: `fly tokens create deploy -a limelight-api`
-#   3. Set app secrets in the Fly dashboard (OPENAI_API_KEY, DATABASE_URL,
-#      DATABASE_URL_DIRECT) — see docs/DEPLOY.md.
+#   1. Create an ORG-scoped token (can create apps, unlike an app-scoped
+#      deploy token):
+#        fly tokens create org            # pick your org; "personal" is default
+#      Add it as repo secret FLY_API_TOKEN (GitHub → Settings → Secrets → Actions).
+#   2. Set the app secrets in the Fly dashboard (app → Secrets), or once the app
+#      exists via CLI (OPENAI_API_KEY, DATABASE_URL, DATABASE_URL_DIRECT) —
+#      see docs/DEPLOY.md.
 
 on:
   push:
@@ -19,6 +21,10 @@ on:
       - ".github/workflows/fly-deploy.yml"
   workflow_dispatch: {}
 
+env:
+  FLY_APP: limelight-geo
+  FLY_ORG: personal # change if the app lives in a non-personal org
+
 jobs:
   deploy:
     name: fly deploy
@@ -26,11 +32,16 @@ jobs:
     concurrency:
       group: fly-deploy-${{ github.ref }}
       cancel-in-progress: true
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Create app if missing
+        working-directory: backend
+        run: flyctl apps create "$FLY_APP" --org "$FLY_ORG" || true
+
       - name: Deploy
         working-directory: backend
         run: flyctl deploy --remote-only
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

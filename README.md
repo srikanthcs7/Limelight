@@ -85,7 +85,7 @@ uvicorn app.main:app --reload
 
 ## Deployment (Fly.io + Supabase + Upstash)
 
-Backend → Fly.io (`limelight-api`, region `iad`), DB → Supabase Postgres, frontend
+Backend → Fly.io (`limelight-geo`, region `iad`), DB → Supabase Postgres, frontend
 → Vercel. The first deploy is API-only; worker/beat + Upstash Redis land with M4.
 Full step-by-step (Supabase → Fly → Vercel → live check) is in
 [`docs/DEPLOY.md`](docs/DEPLOY.md). Config lives in `backend/fly.toml` and

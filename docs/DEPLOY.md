@@ -1,6 +1,6 @@
 # Deploying Limelight
 
-Backend → **Fly.io** (app `limelight-api`, region `iad`), DB → **Supabase Postgres**
+Backend → **Fly.io** (app `limelight-geo`, region `iad`), DB → **Supabase Postgres**
 (`us-east-1`), frontend → **Vercel**.
 
 This first deploy stands up the **API only**. The Celery worker + beat (the daily
@@ -39,16 +39,25 @@ Order: **Supabase → Fly → Vercel → live check**.
 You can deploy either **from CI on git push** (recommended — no local flyctl) or
 **manually**.
 
-### Option A — deploy via GitHub Actions (push-to-deploy)
-`.github/workflows/fly-deploy.yml` runs `flyctl deploy` on every push touching
-`backend/`. One-time setup:
-1. Create the app: `fly apps create limelight-api` (or via the Fly dashboard).
-2. Generate a deploy token: `fly tokens create deploy -a limelight-api`, then add
-   it as repo secret **`FLY_API_TOKEN`** (GitHub → Settings → Secrets → Actions).
-3. Set the app secrets in the **Fly dashboard** (app → Secrets):
+### Option A — deploy via GitHub Actions (push-to-deploy, hands-off)
+`.github/workflows/fly-deploy.yml` **creates the app if missing** and runs
+`flyctl deploy` on every push touching `backend/`. One-time setup:
+1. Create an **org-scoped** token (an app-scoped deploy token can't create the
+   app — chicken/egg):
+   ```bash
+   fly tokens create org        # pick your org; "personal" is the default
+   ```
+   Add it as repo secret **`FLY_API_TOKEN`** (GitHub → Settings → Secrets → Actions).
+2. Run the workflow once (**Actions → Deploy backend to Fly → Run workflow**, or
+   push a `backend/` change). It creates `limelight-geo` and deploys — the first
+   deploy will start but the app has no secrets yet, so set them next.
+3. Set the app secrets in the **Fly dashboard** (`limelight-geo` → Secrets):
    `OPENAI_API_KEY`, `DATABASE_URL`, `DATABASE_URL_DIRECT` (values from §1).
-4. Push (or run the workflow manually via **Actions → Deploy backend to Fly →
-   Run workflow**). CI deploys and runs migrations.
+4. Re-run the workflow. The `release_command` runs `alembic upgrade head`, then
+   the API goes live.
+
+> If your app lives in a non-personal org, edit `FLY_ORG` at the top of the
+> workflow to match.
 
 ### Option B — deploy manually
 From the repo root:
@@ -61,7 +70,7 @@ fly auth login
 cd backend
 
 # Create the app WITHOUT deploying (fly.toml already exists; don't let it overwrite).
-fly apps create limelight-api        # if the name is taken, pick another and update fly.toml `app = ...`
+fly apps create limelight-geo        # if the name is taken, pick another and update fly.toml `app = ...`
 
 # Set secrets (never commit these). Paste your real values:
 fly secrets set \
@@ -75,9 +84,9 @@ fly deploy
 
 Verify:
 ```bash
-curl https://limelight-api.fly.dev/health          # {"status":"ok"}
+curl https://limelight-geo.fly.dev/health          # {"status":"ok"}
 fly ssh console -C "python -m app.cli seed"         # creates GetQuizSolve
-curl https://limelight-api.fly.dev/brands           # should list GetQuizSolve
+curl https://limelight-geo.fly.dev/brands           # should list GetQuizSolve
 ```
 
 ---
@@ -88,7 +97,7 @@ curl https://limelight-api.fly.dev/brands           # should list GetQuizSolve
 2. Project settings:
    - **Root Directory**: `frontend`
    - **Framework Preset**: Vite (auto-detected)
-   - **Environment Variable**: `VITE_API_BASE = https://limelight-api.fly.dev`
+   - **Environment Variable**: `VITE_API_BASE = https://limelight-geo.fly.dev`
 3. Deploy. Note the resulting URL, e.g. `https://limelight-<hash>.vercel.app`.
 
 4. **Allow the frontend origin in the API's CORS**, then redeploy the backend:
@@ -103,7 +112,7 @@ curl https://limelight-api.fly.dev/brands           # should list GetQuizSolve
 ## 4. Live check (confirms the OpenAI response shape — the M1 checkpoint)
 
 Use the brand id that `python -m app.cli seed` printed in step 2 (or read it from
-`curl https://limelight-api.fly.dev/brands`). Then:
+`curl https://limelight-geo.fly.dev/brands`). Then:
 
 ```bash
 cd backend
