@@ -382,6 +382,46 @@ select {
   font-size: 12px;
   margin-top: 10px;
 }
+.link-btn {
+  border: none;
+  background: transparent;
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 6px 0 0;
+}
+.raw-box {
+  margin-top: 8px;
+  background: var(--surface-2);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+}
+.raw-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.raw-links a {
+  font-size: 12px;
+  color: var(--accent);
+  text-decoration: none;
+  background: var(--accent-weak);
+  padding: 2px 8px;
+  border-radius: 980px;
+}
+.raw-box pre {
+  margin: 0;
+  max-height: 340px;
+  overflow: auto;
+  font-size: 12px;
+  line-height: 1.45;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
 
 /* Two-column grid (share-of-voice + sources) */
 .grid-2 {

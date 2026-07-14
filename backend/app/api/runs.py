@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.orm import Session, selectinload
 
@@ -35,6 +35,23 @@ def list_runs(
             .limit(limit)
         )
     )
+
+
+@router.get("/{run_id}")
+def get_run(brand_id: uuid.UUID, run_id: uuid.UUID, db: Session = Depends(get_db)) -> dict:
+    """Full run incl. the complete stored provider response (raw_response_json)."""
+    run = db.get(Run, run_id)
+    if run is None:
+        raise HTTPException(status_code=404, detail="run not found")
+    brand_of_run = db.scalar(select(Prompt.brand_id).where(Prompt.id == run.prompt_id))
+    if brand_of_run != brand_id:
+        raise HTTPException(status_code=404, detail="run not found")
+    return {
+        "id": str(run.id),
+        "run_at": run.run_at.isoformat(),
+        "answer_text": run.answer_text,
+        "raw_response_json": run.raw_response_json,
+    }
 
 
 @router.post("", status_code=201, dependencies=[Depends(require_admin)])

@@ -7,6 +7,7 @@ import { CompetitorTable } from "../components/CompetitorTable";
 import { SourcesBar } from "../components/SourcesBar";
 import { PromptDrilldown } from "../components/PromptDrilldown";
 import { GapList } from "../components/GapList";
+import { RunCard } from "../components/RunCard";
 import { CoverageRing } from "../components/CoverageRing";
 import { PromptsModal } from "../components/PromptsModal";
 import { IntentCoverage } from "../components/IntentCoverage";
@@ -286,22 +287,7 @@ export function Dashboard() {
         <h2>Recent runs</h2>
         {runsQ.data && runsQ.data.length === 0 && <p className="muted">No runs yet.</p>}
         {runsQ.data?.map((run) => (
-          <div key={run.id} className="run">
-            <div className="run-time">{new Date(run.run_at).toLocaleString()}</div>
-            <p className="run-answer">{run.answer_text.slice(0, 240)}…</p>
-            <div className="chips">
-              {run.mentions.length === 0 && <span className="muted">No tracked brands mentioned</span>}
-              {run.mentions.map((m) => (
-                <span key={m.entity_name} className={m.is_tracked_brand ? "chip brand" : "chip"}>
-                  {m.sentiment && <i className={`sdot ${m.sentiment}`} />}
-                  {m.entity_name} · #{m.position}
-                </span>
-              ))}
-            </div>
-            <div className="cited">
-              Cited: {[...new Set(run.citations.map((c) => c.domain))].join(", ") || "none"}
-            </div>
-          </div>
+          <RunCard key={run.id} brandId={activeBrandId!} run={run} />
         ))}
       </div>
     </div>

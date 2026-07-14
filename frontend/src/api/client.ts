@@ -152,6 +152,10 @@ export const api = {
   updateSettings: (brandId: string, body: BrandSettings, token: string) =>
     send<Brand>("PATCH", `/brands/${brandId}/settings`, token, body),
   runs: (brandId: string, engine: string) => get<Run[]>(`/brands/${brandId}/runs?engine=${engine}`),
+  runDetail: (brandId: string, runId: string) =>
+    get<{ id: string; run_at: string; answer_text: string; raw_response_json: unknown }>(
+      `/brands/${brandId}/runs/${runId}`,
+    ),
   scores: (brandId: string, engine: string) => get<Score[]>(`/brands/${brandId}/scores?engine=${engine}`),
   prompts: (brandId: string, activeOnly = false) =>
     get<Prompt[]>(`/brands/${brandId}/prompts${activeOnly ? "?active_only=true" : ""}`),
