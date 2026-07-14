@@ -32,11 +32,12 @@ if settings.redis_url.startswith("rediss://"):
     celery_app.conf.broker_use_ssl = {"ssl_cert_reqs": ssl.CERT_NONE}
     celery_app.conf.redis_backend_use_ssl = {"ssl_cert_reqs": ssl.CERT_NONE}
 
-# Daily: recompute the whole tracked set. 06:00 UTC.
+# Hourly tick: the dispatcher enqueues only brands whose per-brand frequency
+# (manual|hourly|daily|weekly) says they're due.
 celery_app.conf.beat_schedule = {
-    "daily-run-all-brands": {
-        "task": "app.tasks.run_tasks.run_all_brands",
-        "schedule": crontab(hour=6, minute=0),
+    "dispatch-due-brands": {
+        "task": "app.tasks.run_tasks.dispatch_due_brands",
+        "schedule": crontab(minute=0),  # every hour on the hour
     },
 }
 
