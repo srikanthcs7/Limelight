@@ -13,7 +13,7 @@ from datetime import datetime, time, timedelta, timezone
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.models import Brand, Citation, Engine, Mention, Prompt, Run
+from app.models import Brand, Citation, Mention, Prompt, Run
 
 # Composite weights — one place to tune. (spec §7 scoring)
 W_MENTION = 0.40
@@ -129,13 +129,14 @@ def recompute_window(
     """Recompute and upsert ONE Score row for an explicit window. window_start
     None => all-time (epoch sentinel)."""
     from app.models import Score  # local import avoids a cycle at module load
+    from app.seed import ensure_engine
 
     brand = db.get(Brand, brand_id)
     if brand is None:
         raise ValueError(f"brand {brand_id} not found")
-    engine = db.scalar(select(Engine).where(Engine.key == engine_key))
+    engine = ensure_engine(db, engine_key)
     if engine is None:
-        raise ValueError(f"engine {engine_key!r} not seeded")
+        raise ValueError(f"no provider registered for engine {engine_key!r}")
 
     run_ids = _run_ids_in_window(db, brand_id, engine.id, window_start, window_end)
     comp = compute_components(db, brand, run_ids)

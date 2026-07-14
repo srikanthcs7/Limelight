@@ -33,9 +33,11 @@ def _entities_for_brand(db: Session, brand: Brand) -> list[Entity]:
 
 
 def _engine_row(db: Session, key: str) -> Engine:
-    engine = db.scalar(select(Engine).where(Engine.key == key))
+    from app.seed import ensure_engine
+
+    engine = ensure_engine(db, key)
     if engine is None:
-        raise ValueError(f"engine {key!r} not seeded — run `cli seed`")
+        raise ValueError(f"no provider registered for engine {key!r}")
     return engine
 
 

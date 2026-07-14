@@ -90,3 +90,18 @@ def test_run_all_engines_stores_runs_per_engine(db, monkeypatch):
     result = run_brand_all_engines(db, brand.id)
     assert result == {"openai": 1, "google_aio": 1}
     assert db.query(Run).count() == 2  # one run per engine for the single prompt
+
+
+def test_engine_row_self_heals(db, monkeypatch):
+    """Enabling an engine that was never seeded should still run (row auto-created)."""
+    brand = seed_getquizsolve(db)
+    brand.tracked_engines = ["google_aio"]
+    db.query(Engine).filter(Engine.key == "google_aio").delete()  # simulate un-seeded engine
+    db.flush()
+
+    monkeypatch.setattr(runner_mod, "get_provider", lambda key: _AIOFake())
+    monkeypatch.setattr(llm_mod, "complete_json", lambda s, u, model=None: FAKE_EXTRACTION)
+
+    result = run_brand_all_engines(db, brand.id)
+    assert result == {"google_aio": 1}
+    assert db.query(Engine).filter(Engine.key == "google_aio").count() == 1  # recreated

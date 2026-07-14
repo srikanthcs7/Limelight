@@ -38,6 +38,17 @@ def ensure_engines(db: Session) -> None:
     db.flush()
 
 
+def ensure_engine(db: Session, key: str) -> Engine | None:
+    """Get (or create, if it's a registered provider) the engine row for `key`.
+    Self-heals when a brand enables an engine that wasn't seeded yet."""
+    engine = db.scalar(select(Engine).where(Engine.key == key))
+    if engine is None and key in provider_keys():
+        engine = Engine(key=key)
+        db.add(engine)
+        db.flush()
+    return engine
+
+
 def seed_getquizsolve(db: Session) -> Brand:
     """Idempotent: creates the brand only if its domain isn't present yet."""
     ensure_engines(db)
