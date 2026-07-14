@@ -610,11 +610,42 @@ select {
   overflow-y: auto;
   padding: 12px 24px;
 }
+.bulk-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 24px;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-2);
+}
+.bulk-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--ink-2);
+  cursor: pointer;
+}
+.bulk-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+.btn.danger {
+  background: var(--danger);
+  color: #fff;
+}
 .prompt-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   padding: 6px 0;
+  border-radius: 8px;
+}
+.prompt-row.sel {
+  background: var(--accent-weak);
 }
 .prompt-input {
   flex: 1;

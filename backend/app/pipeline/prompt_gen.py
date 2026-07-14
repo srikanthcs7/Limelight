@@ -175,6 +175,48 @@ def persist_generated(
     return summary
 
 
+def refine_prompts(db: Session, brand_id, prompt_ids: list) -> dict:
+    """LLM-rewrite the selected prompts into sharper, more realistic buyer
+    questions (same intent). Only touches prompts belonging to the brand."""
+    from app import llm
+
+    brand = db.get(Brand, brand_id)
+    if brand is None:
+        raise ValueError(f"brand {brand_id} not found")
+
+    prompts = [
+        p
+        for p in (db.get(Prompt, pid) for pid in prompt_ids)
+        if p is not None and p.brand_id == brand_id
+    ]
+    if not prompts:
+        return {"refined": 0}
+
+    items = [{"i": i, "text": p.text, "intent": p.intent_type} for i, p in enumerate(prompts)]
+    system = (
+        "You refine buyer prompts used to measure a brand's visibility in AI "
+        "assistant answers. Rewrite each to sound like a real person's query and "
+        "be specific to the category, KEEPING the same intent. Return STRICT JSON."
+    )
+    user = (
+        f"Brand: {brand.display_name} ({brand.domain}) — {brand.category or 'unknown'}\n"
+        f"Prompts to refine (keep the same 'i'):\n{items}\n\n"
+        'Return JSON: {"items": [{"i": 0, "text": "refined prompt"}]}'
+    )
+    raw = llm.complete_json(system, user)
+
+    refined = 0
+    for it in raw.get("items", []) or []:
+        idx = it.get("i")
+        text = (it.get("text") or "").strip()
+        if isinstance(idx, int) and 0 <= idx < len(prompts) and text:
+            prompts[idx].text = text
+            refined += 1
+    db.flush()
+    log_event(log, "prompt_gen.refined", brand=brand.display_name, refined=refined)
+    return {"refined": refined}
+
+
 def generate_for_brand(db: Session, brand_id, target: int = DEFAULT_TARGET) -> dict:
     """Orchestrate: scrape → LLM generate → persist."""
     brand = db.get(Brand, brand_id)

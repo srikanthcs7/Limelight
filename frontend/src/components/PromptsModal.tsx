@@ -24,12 +24,16 @@ export function PromptsModal({
     queryFn: () => api.prompts(brandId, true),
   });
   const [drafts, setDrafts] = useState<Record<string, string>>({});
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+
+  const rows = promptsQ.data ?? [];
 
   const invalidate = () => {
-    for (const k of ["prompts", "breakdown", "gaps"]) {
+    for (const k of ["prompts", "breakdown", "gaps", "intent"]) {
       qc.invalidateQueries({ queryKey: [k, brandId] });
     }
   };
+  const clearSel = () => setSelected(new Set());
 
   const genM = useMutation({
     mutationFn: () => api.generatePrompts(brandId, token, 10),
@@ -41,11 +45,31 @@ export function PromptsModal({
     onSuccess: invalidate,
   });
   const delM = useMutation({
-    mutationFn: (id: string) => api.deletePrompt(brandId, id, token),
-    onSuccess: invalidate,
+    mutationFn: (ids: string[]) => api.bulkDeletePrompts(brandId, ids, token),
+    onSuccess: () => {
+      invalidate();
+      clearSel();
+    },
+  });
+  const refineM = useMutation({
+    mutationFn: (ids: string[]) => api.refinePrompts(brandId, ids, token),
+    onSuccess: () => {
+      invalidate();
+      clearSel();
+    },
   });
 
-  const rows = promptsQ.data ?? [];
+  const busy = delM.isPending || refineM.isPending || genM.isPending;
+  const allChecked = rows.length > 0 && selected.size === rows.length;
+  const selIds = [...selected];
+
+  const toggle = (id: string) =>
+    setSelected((s) => {
+      const n = new Set(s);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  const toggleAll = () => setSelected(allChecked ? new Set() : new Set(rows.map((r) => r.id)));
 
   const commit = (p: Prompt) => {
     const draft = drafts[p.id];
@@ -60,19 +84,48 @@ export function PromptsModal({
         <div className="modal-head">
           <div>
             <h2 style={{ margin: 0 }}>Tracked prompts</h2>
-            <span className="muted">{rows.length} active · edit or remove, then generate more</span>
+            <span className="muted">{rows.length} active · edit, select, or generate more</span>
           </div>
           <button className="btn secondary" onClick={onClose}>
             Done
           </button>
         </div>
 
+        {rows.length > 0 && (
+          <div className="bulk-bar">
+            <label className="bulk-all">
+              <input type="checkbox" checked={allChecked} onChange={toggleAll} />
+              Select all
+            </label>
+            {selected.size > 0 && (
+              <div className="bulk-actions">
+                <span className="muted">{selected.size} selected</span>
+                <button
+                  className="btn secondary"
+                  disabled={busy}
+                  onClick={() => refineM.mutate(selIds)}
+                >
+                  {refineM.isPending ? "Refining…" : "Refine"}
+                </button>
+                <button className="btn danger" disabled={busy} onClick={() => delM.mutate(selIds)}>
+                  {delM.isPending ? "Deleting…" : "Delete"}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="modal-body">
           {rows.length === 0 && !promptsQ.isLoading && (
             <p className="muted">No prompts yet. Generate a first batch below.</p>
           )}
           {rows.map((p) => (
-            <div key={p.id} className="prompt-row">
+            <div key={p.id} className={selected.has(p.id) ? "prompt-row sel" : "prompt-row"}>
+              <input
+                type="checkbox"
+                checked={selected.has(p.id)}
+                onChange={() => toggle(p.id)}
+              />
               <input
                 className="prompt-input"
                 defaultValue={p.text}
@@ -80,14 +133,6 @@ export function PromptsModal({
                 onBlur={() => commit(p)}
               />
               <span className="chip">{p.intent_type ? INTENT_LABEL[p.intent_type] ?? p.intent_type : "—"}</span>
-              <button
-                className="icon-btn"
-                title="Remove"
-                disabled={delM.isPending}
-                onClick={() => delM.mutate(p.id)}
-              >
-                ✕
-              </button>
             </div>
           ))}
         </div>
@@ -96,12 +141,9 @@ export function PromptsModal({
           <button className="btn" disabled={genM.isPending} onClick={() => genM.mutate()}>
             {genM.isPending ? "Generating…" : rows.length ? "Generate 10 more" : "Generate 10 prompts"}
           </button>
-          {genM.isSuccess && !genM.isPending && (
-            <span className="ok">Added {genM.data.added_prompts}.</span>
-          )}
-          {(genM.error || saveM.error || delM.error) && (
+          {(genM.error || saveM.error || delM.error || refineM.error) && (
             <span className="err">
-              {String(((genM.error || saveM.error || delM.error) as Error).message)}
+              {String(((genM.error || saveM.error || delM.error || refineM.error) as Error).message)}
             </span>
           )}
         </div>

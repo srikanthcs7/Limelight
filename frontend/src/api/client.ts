@@ -164,6 +164,15 @@ export const api = {
     post<{ runs: number }>(`/brands/${brandId}/runs`, token),
   generatePrompts: (brandId: string, token: string, target = 10) =>
     post<{ added_prompts: number }>(`/brands/${brandId}/prompts:generate?target=${target}`, token),
+  refinePrompts: (brandId: string, ids: string[], token: string) =>
+    send<{ refined: number }>("POST", `/brands/${brandId}/prompts:refine`, token, { prompt_ids: ids }),
+  bulkDeletePrompts: (brandId: string, ids: string[], token: string) =>
+    send<{ deleted: number; deactivated: number }>(
+      "POST",
+      `/brands/${brandId}/prompts:bulk-delete`,
+      token,
+      { prompt_ids: ids },
+    ),
   shareOfVoice: (brandId: string, engine: string) =>
     get<ShareRow[]>(`/brands/${brandId}/share-of-voice?engine=${engine}`),
   sovTimeline: (brandId: string, engine: string) =>

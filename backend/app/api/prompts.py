@@ -22,6 +22,10 @@ class PromptUpdate(BaseModel):
     active: bool | None = None
 
 
+class PromptIds(BaseModel):
+    prompt_ids: list[uuid.UUID]
+
+
 @router.get("", response_model=list[PromptOut])
 def list_prompts(
     brand_id: uuid.UUID, active_only: bool = False, db: Session = Depends(get_db)
@@ -42,6 +46,36 @@ def generate_prompts(
     summary = generate_for_brand(db, brand_id, target=target)
     db.commit()
     return summary
+
+
+@router.post(":refine", dependencies=[Depends(require_admin)])
+def refine_selected(brand_id: uuid.UUID, body: PromptIds, db: Session = Depends(get_db)) -> dict:
+    """LLM-refine the selected prompts in place (admin-gated; makes an LLM call)."""
+    from app.pipeline.prompt_gen import refine_prompts
+
+    result = refine_prompts(db, brand_id, body.prompt_ids)
+    db.commit()
+    return result
+
+
+@router.post(":bulk-delete", dependencies=[Depends(require_admin)])
+def bulk_delete(brand_id: uuid.UUID, body: PromptIds, db: Session = Depends(get_db)) -> dict:
+    """Delete the selected prompts (soft-delete any that have run history)."""
+    from app.models import Run
+
+    deleted = deactivated = 0
+    for pid in body.prompt_ids:
+        prompt = db.get(Prompt, pid)
+        if prompt is None or prompt.brand_id != brand_id:
+            continue
+        if db.scalar(select(Run.id).where(Run.prompt_id == pid).limit(1)) is not None:
+            prompt.active = False
+            deactivated += 1
+        else:
+            db.delete(prompt)
+            deleted += 1
+    db.commit()
+    return {"deleted": deleted, "deactivated": deactivated}
 
 
 def _get_prompt(db: Session, brand_id: uuid.UUID, prompt_id: uuid.UUID) -> Prompt:
