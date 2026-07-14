@@ -89,6 +89,7 @@ fly secrets set \
   OPENAI_API_KEY="sk-..." \
   ADMIN_TOKEN="<long-random-string>" \
   REDIS_URL="rediss://default:<PW>@<host>.upstash.io:6379" \
+  SERPAPI_API_KEY="<serpapi-key, only if tracking google_aio>" \
   DATABASE_URL="postgresql+psycopg://postgres.<REF>:<PASSWORD>@aws-0-us-east-1.pooler.supabase.com:6543/postgres?sslmode=require" \
   DATABASE_URL_DIRECT="postgresql+psycopg://postgres.<REF>:<PASSWORD>@aws-0-us-east-1.pooler.supabase.com:5432/postgres?sslmode=require"
 
