@@ -168,6 +168,14 @@ def recompute_window(
     }
 
 
+def recompute_all_engines(db: Session, brand_id: uuid.UUID) -> dict:
+    """Recompute standard windows for every engine the brand tracks."""
+    brand = db.get(Brand, brand_id)
+    if brand is None:
+        raise ValueError(f"brand {brand_id} not found")
+    return {ek: recompute_scores(db, brand_id, ek) for ek in (brand.tracked_engines or ["openai"])}
+
+
 def recompute_scores(db: Session, brand_id: uuid.UUID, engine_key: str = "openai") -> dict:
     """Recompute & upsert all STANDARD_WINDOWS ending end-of-today. Returns a dict
     keyed by window label. Each 7d/30d row's window_start moves daily, so days

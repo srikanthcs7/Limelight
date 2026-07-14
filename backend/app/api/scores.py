@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import get_db
-from app.models import Score
+from app.models import Engine, Score
 from app.pipeline.scoring import EPOCH, recompute_scores
 from app.schemas import ScoreOut
 
@@ -27,12 +27,14 @@ def _label(score: Score) -> str:
 
 
 @router.get("", response_model=list[ScoreOut])
-def list_scores(brand_id: uuid.UUID, db: Session = Depends(get_db)) -> list[ScoreOut]:
-    recompute_scores(db, brand_id)
+def list_scores(brand_id: uuid.UUID, engine: str = "openai", db: Session = Depends(get_db)) -> list[ScoreOut]:
+    recompute_scores(db, brand_id, engine)
     db.commit()
-    rows = db.scalars(
-        select(Score).where(Score.brand_id == brand_id).order_by(Score.window_end)
-    )
+    engine_id = db.scalar(select(Engine.id).where(Engine.key == engine))
+    stmt = select(Score).where(Score.brand_id == brand_id)
+    if engine_id is not None:
+        stmt = stmt.where(Score.engine_id == engine_id)
+    rows = db.scalars(stmt.order_by(Score.window_end))
     return [
         ScoreOut(
             window_label=_label(s),

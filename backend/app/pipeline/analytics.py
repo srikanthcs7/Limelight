@@ -7,23 +7,29 @@ import uuid
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.models import Citation, Mention, Prompt, Run
+from app.models import Citation, Engine, Mention, Prompt, Run
+
+DEFAULT_ENGINE = "openai"
 
 
-def _brand_run_ids(db: Session, brand_id: uuid.UUID) -> list[uuid.UUID]:
+def _brand_run_ids(db: Session, brand_id: uuid.UUID, engine_key: str = DEFAULT_ENGINE) -> list[uuid.UUID]:
     prompt_ids = list(db.scalars(select(Prompt.id).where(Prompt.brand_id == brand_id)))
     if not prompt_ids:
         return []
-    return list(db.scalars(select(Run.id).where(Run.prompt_id.in_(prompt_ids))))
+    stmt = select(Run.id).where(Run.prompt_id.in_(prompt_ids))
+    engine_id = db.scalar(select(Engine.id).where(Engine.key == engine_key))
+    if engine_id is not None:
+        stmt = stmt.where(Run.engine_id == engine_id)
+    return list(db.scalars(stmt))
 
 
 def _sentiment_count(value: str):
     return func.count().filter(Mention.sentiment == value)
 
 
-def share_of_voice(db: Session, brand_id: uuid.UUID) -> list[dict]:
+def share_of_voice(db: Session, brand_id: uuid.UUID, engine_key: str = DEFAULT_ENGINE) -> list[dict]:
     """Mentions per entity across the brand's runs, with share + sentiment split."""
-    run_ids = _brand_run_ids(db, brand_id)
+    run_ids = _brand_run_ids(db, brand_id, engine_key)
     if not run_ids:
         return []
     rows = db.execute(
@@ -54,9 +60,9 @@ def share_of_voice(db: Session, brand_id: uuid.UUID) -> list[dict]:
     ]
 
 
-def intent_coverage(db: Session, brand_id: uuid.UUID) -> list[dict]:
+def intent_coverage(db: Session, brand_id: uuid.UUID, engine_key: str = DEFAULT_ENGINE) -> list[dict]:
     """Per intent type: how many active prompts mention the brand (coverage)."""
-    rows = prompt_breakdown(db, brand_id)
+    rows = prompt_breakdown(db, brand_id, engine_key)
     buckets: dict[str, dict] = {}
     for r in rows:
         key = r["intent_type"] or "other"
@@ -71,10 +77,12 @@ def intent_coverage(db: Session, brand_id: uuid.UUID) -> list[dict]:
     return out
 
 
-def sov_timeline(db: Session, brand_id: uuid.UUID, top: int = 4) -> dict:
+def sov_timeline(
+    db: Session, brand_id: uuid.UUID, top: int = 4, engine_key: str = DEFAULT_ENGINE
+) -> dict:
     """Per-day share of voice for the brand + top competitors (rest folded into
     'Other'). Builds a multi-series trend from immutable runs."""
-    run_ids = _brand_run_ids(db, brand_id)
+    run_ids = _brand_run_ids(db, brand_id, engine_key)
     if not run_ids:
         return {"days": [], "series": []}
     day = func.date(Run.run_at).label("day")
@@ -121,9 +129,11 @@ def sov_timeline(db: Session, brand_id: uuid.UUID, top: int = 4) -> dict:
     return {"days": days, "series": series}
 
 
-def top_sources(db: Session, brand_id: uuid.UUID, limit: int = 15) -> list[dict]:
+def top_sources(
+    db: Session, brand_id: uuid.UUID, limit: int = 15, engine_key: str = DEFAULT_ENGINE
+) -> list[dict]:
     """Domains the engine cites most across the brand's runs."""
-    run_ids = _brand_run_ids(db, brand_id)
+    run_ids = _brand_run_ids(db, brand_id, engine_key)
     if not run_ids:
         return []
     rows = db.execute(
@@ -136,9 +146,10 @@ def top_sources(db: Session, brand_id: uuid.UUID, limit: int = 15) -> list[dict]
     return [{"domain": r.domain, "citations": r.citations} for r in rows]
 
 
-def prompt_breakdown(db: Session, brand_id: uuid.UUID) -> list[dict]:
-    """Per active prompt: latest-run brand mention status + run count. Powers the
-    drill-down and (in M6) the gap list."""
+def prompt_breakdown(db: Session, brand_id: uuid.UUID, engine_key: str = DEFAULT_ENGINE) -> list[dict]:
+    """Per active prompt: latest-run brand mention status + run count for one
+    engine. Powers the drill-down and the gap list."""
+    engine_id = db.scalar(select(Engine.id).where(Engine.key == engine_key))
     prompts = list(
         db.scalars(
             select(Prompt).where(Prompt.brand_id == brand_id, Prompt.active.is_(True))
@@ -146,9 +157,10 @@ def prompt_breakdown(db: Session, brand_id: uuid.UUID) -> list[dict]:
     )
     out: list[dict] = []
     for p in prompts:
-        runs = list(
-            db.scalars(select(Run).where(Run.prompt_id == p.id).order_by(Run.run_at.desc()))
-        )
+        stmt = select(Run).where(Run.prompt_id == p.id)
+        if engine_id is not None:
+            stmt = stmt.where(Run.engine_id == engine_id)
+        runs = list(db.scalars(stmt.order_by(Run.run_at.desc())))
         latest = runs[0] if runs else None
         brand_mentioned = False
         position = None

@@ -14,6 +14,10 @@ class Settings(BaseSettings):
     openai_engine_model: str = "gpt-4o"
     openai_intel_model: str = "gpt-4o-mini"
 
+    # SerpApi — powers the Google AI Overviews engine (Phase 2).
+    serpapi_api_key: str = ""
+    serpapi_default_location: str = "United States"
+
     # Database
     database_url: str = "postgresql+psycopg://limelight:limelight@localhost:5432/limelight"
     database_url_direct: str = ""

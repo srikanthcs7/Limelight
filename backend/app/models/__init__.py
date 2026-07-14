@@ -36,6 +36,19 @@ class Brand(Base):
     category: Mapped[str | None] = mapped_column(String(255))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
+    # --- configuration (Phase 2) ---
+    # Which engines to run for this brand (keys into `engines`).
+    tracked_engines: Mapped[list[str]] = mapped_column(
+        ARRAY(String), default=lambda: ["openai"], server_default="{openai}"
+    )
+    # How often the scheduler should run this brand: manual|hourly|daily|weekly.
+    run_frequency: Mapped[str] = mapped_column(String(16), default="daily", server_default="daily")
+    # Geo/locale for engines that personalise (Google AI Overviews).
+    location: Mapped[str | None] = mapped_column(String(128))  # e.g. "United States"
+    language: Mapped[str] = mapped_column(String(8), default="en", server_default="en")
+    # Last time the scheduler dispatched a run (drives frequency due-checks).
+    last_run_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
     competitors: Mapped[list["Competitor"]] = relationship(
         back_populates="brand", cascade="all, delete-orphan"
     )

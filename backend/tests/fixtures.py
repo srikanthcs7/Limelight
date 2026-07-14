@@ -3,6 +3,32 @@
 live API call. The exact live shape is confirmed against the real API in the
 user's environment (M1 handoff)."""
 
+SERPAPI_AIO_RESPONSE = {
+    "search_metadata": {"id": "abc"},
+    "ai_overview": {
+        "text_blocks": [
+            {
+                "type": "paragraph",
+                "snippet": "For online courses, GetQuizSolve is a popular study-helper extension.",
+            },
+            {
+                "type": "list",
+                "list": [
+                    {"title": "Coursology", "snippet": "an AI homework helper"},
+                    {"title": "QuizAce", "snippet": "quiz assistance"},
+                ],
+            },
+        ],
+        "references": [
+            {"title": "Best study extensions", "link": "https://www.reddit.com/r/college/x", "source": "Reddit", "index": 1},
+            {"title": "GetQuizSolve", "link": "https://getquizsolve.com/features", "source": "GetQuizSolve", "index": 2},
+        ],
+    },
+}
+
+# A SERP with no AI Overview block (a valid "not present" result).
+SERPAPI_NO_AIO = {"search_metadata": {"id": "def"}, "organic_results": []}
+
 RESPONSES_WEB_SEARCH_DUMP = {
     "id": "resp_abc123",
     "model": "gpt-4o",

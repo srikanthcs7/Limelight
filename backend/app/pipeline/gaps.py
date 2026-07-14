@@ -20,36 +20,36 @@ from app.pipeline.analytics import prompt_breakdown, top_sources
 log = logging.getLogger("limelight.gaps")
 
 
-def prompt_gaps(db: Session, brand_id: uuid.UUID) -> list[dict]:
+def prompt_gaps(db: Session, brand_id: uuid.UUID, engine_key: str = "openai") -> list[dict]:
     """Prompts where a competitor is named but the brand isn't."""
     return [
         r
-        for r in prompt_breakdown(db, brand_id)
+        for r in prompt_breakdown(db, brand_id, engine_key)
         if not r["brand_mentioned"] and r["competitors_present"]
     ]
 
 
-def source_gaps(db: Session, brand_id: uuid.UUID, limit: int = 10) -> list[dict]:
-    """Domains ChatGPT cites most — outreach/placement targets."""
-    return top_sources(db, brand_id, limit)
+def source_gaps(db: Session, brand_id: uuid.UUID, limit: int = 10, engine_key: str = "openai") -> list[dict]:
+    """Domains the engine cites most — outreach/placement targets."""
+    return top_sources(db, brand_id, limit, engine_key)
 
 
-def compute_gaps(db: Session, brand_id: uuid.UUID) -> dict:
+def compute_gaps(db: Session, brand_id: uuid.UUID, engine_key: str = "openai") -> dict:
     """Cheap (no LLM) gap report."""
     return {
-        "prompt_gaps": prompt_gaps(db, brand_id),
-        "source_gaps": source_gaps(db, brand_id),
+        "prompt_gaps": prompt_gaps(db, brand_id, engine_key),
+        "source_gaps": source_gaps(db, brand_id, engine_key=engine_key),
     }
 
 
-def recommend(db: Session, brand_id: uuid.UUID) -> list[str]:
+def recommend(db: Session, brand_id: uuid.UUID, engine_key: str = "openai") -> list[str]:
     """LLM pass: turn the gaps into a short ranked list of concrete actions."""
     from app import llm
 
     brand = db.get(Brand, brand_id)
     if brand is None:
         raise ValueError(f"brand {brand_id} not found")
-    gaps = compute_gaps(db, brand_id)
+    gaps = compute_gaps(db, brand_id, engine_key)
 
     losing = [
         {"prompt": g["text"], "competitors": g["competitors_present"][:4]}

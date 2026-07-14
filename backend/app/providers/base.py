@@ -9,6 +9,17 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import Any, Protocol, runtime_checkable
+from urllib.parse import urlparse
+
+import tldextract
+
+
+def domain_of(url: str) -> str:
+    """Registrable domain for a URL (https://a.b.example.com/x -> example.com)."""
+    ext = tldextract.extract(url)
+    if ext.domain and ext.suffix:
+        return f"{ext.domain}.{ext.suffix}"
+    return urlparse(url).netloc or url
 
 
 @dataclass

@@ -3,9 +3,11 @@ from __future__ import annotations
 
 from app.providers.base import EngineProvider
 from app.providers.openai_provider import OpenAIProvider
+from app.providers.serpapi_provider import SerpApiAIOProvider
 
 _PROVIDERS: dict[str, EngineProvider] = {
     OpenAIProvider.key: OpenAIProvider(),
+    SerpApiAIOProvider.key: SerpApiAIOProvider(),
 }
 
 

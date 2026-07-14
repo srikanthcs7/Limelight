@@ -84,9 +84,7 @@ def run_prompt(prompt_id: str) -> None:
 
 @app.command("run-brand")
 def run_brand(brand_id: str, use_async: bool = typer.Option(False, "--async")) -> None:
-    """Run all active prompts for a brand now. (Implemented in M1; --async in M4.)"""
-    from app.pipeline.runner import run_brand_prompts
-
+    """Run all active prompts through every tracked engine now (--async enqueues)."""
     bid = uuid.UUID(brand_id)
     if use_async:
         from app.tasks.run_tasks import run_brand as run_brand_task
@@ -94,9 +92,13 @@ def run_brand(brand_id: str, use_async: bool = typer.Option(False, "--async")) -
         run_brand_task.delay(str(bid))
         typer.echo(f"enqueued run for brand {bid}")
         return
+    from app.pipeline.runner import run_brand_all_engines
+    from app.pipeline.scoring import recompute_all_engines
+
     with session_scope() as db:
-        runs = run_brand_prompts(db, bid)
-        typer.echo(f"stored {len(runs)} run(s) for brand {bid}")
+        per_engine = run_brand_all_engines(db, bid)
+        recompute_all_engines(db, bid)
+        typer.echo(f"stored runs for brand {bid}: {per_engine}")
 
 
 @app.command("gen-prompts")
@@ -111,11 +113,11 @@ def gen_prompts(brand_id: str, target: int = 10) -> None:
 
 @app.command()
 def score(brand_id: str) -> None:
-    """Recompute scores for a brand's window. (Implemented in M3.)"""
-    from app.pipeline.scoring import recompute_scores
+    """Recompute scores across all tracked engines."""
+    from app.pipeline.scoring import recompute_all_engines
 
     with session_scope() as db:
-        result = recompute_scores(db, uuid.UUID(brand_id))
+        result = recompute_all_engines(db, uuid.UUID(brand_id))
         typer.echo(f"recomputed scores: {result}")
 
 

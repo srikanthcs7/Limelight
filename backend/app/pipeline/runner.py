@@ -50,7 +50,8 @@ def run_single_prompt(
     engine = _engine_row(db, engine_key)
 
     provider = get_provider(engine_key)
-    result = provider.run(prompt.text)
+    opts = {"location": brand.location, "language": brand.language}
+    result = provider.run(prompt.text, opts)
 
     run = Run(
         prompt_id=prompt.id,
@@ -111,3 +112,20 @@ def run_brand_prompts(
             # One bad prompt must not sink the whole daily batch.
             log_event(log, "run.failed", level=logging.ERROR, prompt_id=str(pid), error=str(exc))
     return runs
+
+
+def run_brand_all_engines(db: Session, brand_id: uuid.UUID) -> dict[str, int]:
+    """Run every active prompt through each of the brand's tracked engines."""
+    brand = db.get(Brand, brand_id)
+    if brand is None:
+        raise ValueError(f"brand {brand_id} not found")
+    engines = brand.tracked_engines or [DEFAULT_ENGINE_KEY]
+    out: dict[str, int] = {}
+    for engine_key in engines:
+        try:
+            runs = run_brand_prompts(db, brand_id, engine_key)
+            out[engine_key] = len(runs)
+        except Exception as exc:  # noqa: BLE001
+            log_event(log, "run.engine_failed", level=logging.ERROR, engine=engine_key, error=str(exc))
+            out[engine_key] = 0
+    return out

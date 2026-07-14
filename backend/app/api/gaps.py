@@ -14,10 +14,10 @@ router = APIRouter(prefix="/brands/{brand_id}/gaps", tags=["gaps"])
 
 
 @router.get("")
-def get_gaps(brand_id: uuid.UUID, db: Session = Depends(get_db)) -> dict:
-    return gaps_mod.compute_gaps(db, brand_id)
+def get_gaps(brand_id: uuid.UUID, engine: str = "openai", db: Session = Depends(get_db)) -> dict:
+    return gaps_mod.compute_gaps(db, brand_id, engine)
 
 
 @router.post("/recommend", dependencies=[Depends(require_admin)])
-def recommend(brand_id: uuid.UUID, db: Session = Depends(get_db)) -> dict:
-    return {"recommendations": gaps_mod.recommend(db, brand_id)}
+def recommend(brand_id: uuid.UUID, engine: str = "openai", db: Session = Depends(get_db)) -> dict:
+    return {"recommendations": gaps_mod.recommend(db, brand_id, engine)}

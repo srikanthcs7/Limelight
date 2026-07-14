@@ -25,7 +25,19 @@ class BrandOut(BaseModel):
     aliases: list[str]
     category: str | None
     created_at: datetime
+    tracked_engines: list[str]
+    run_frequency: str
+    location: str | None
+    language: str
+    last_run_at: datetime | None
     competitors: list[CompetitorOut] = []
+
+
+class BrandSettingsUpdate(BaseModel):
+    tracked_engines: list[str] | None = None
+    run_frequency: str | None = None
+    location: str | None = None
+    language: str | None = None
 
 
 class PromptOut(BaseModel):
