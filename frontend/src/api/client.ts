@@ -14,8 +14,26 @@ export interface Brand {
   aliases: string[];
   category: string | null;
   created_at: string;
+  tracked_engines: string[];
+  run_frequency: string;
+  location: string | null;
+  language: string;
+  last_run_at: string | null;
   competitors: Competitor[];
 }
+
+export interface BrandSettings {
+  tracked_engines?: string[];
+  run_frequency?: string;
+  location?: string | null;
+  language?: string;
+}
+
+export const ENGINE_LABELS: Record<string, string> = {
+  openai: "ChatGPT",
+  google_aio: "Google AI Overviews",
+  gemini: "Gemini",
+};
 
 export interface Mention {
   entity_type: string;
@@ -130,8 +148,11 @@ export interface PromptRow {
 
 export const api = {
   brands: () => get<Brand[]>("/brands"),
-  runs: (brandId: string) => get<Run[]>(`/brands/${brandId}/runs`),
-  scores: (brandId: string) => get<Score[]>(`/brands/${brandId}/scores`),
+  engines: () => get<{ engines: string[] }>("/brands/meta/engines"),
+  updateSettings: (brandId: string, body: BrandSettings, token: string) =>
+    send<Brand>("PATCH", `/brands/${brandId}/settings`, token, body),
+  runs: (brandId: string, engine: string) => get<Run[]>(`/brands/${brandId}/runs?engine=${engine}`),
+  scores: (brandId: string, engine: string) => get<Score[]>(`/brands/${brandId}/scores?engine=${engine}`),
   prompts: (brandId: string, activeOnly = false) =>
     get<Prompt[]>(`/brands/${brandId}/prompts${activeOnly ? "?active_only=true" : ""}`),
   updatePrompt: (brandId: string, promptId: string, body: { text?: string; active?: boolean }, token: string) =>
@@ -143,13 +164,18 @@ export const api = {
     post<{ runs: number }>(`/brands/${brandId}/runs`, token),
   generatePrompts: (brandId: string, token: string, target = 10) =>
     post<{ added_prompts: number }>(`/brands/${brandId}/prompts:generate?target=${target}`, token),
-  shareOfVoice: (brandId: string) => get<ShareRow[]>(`/brands/${brandId}/share-of-voice`),
-  sovTimeline: (brandId: string) => get<SovTimeline>(`/brands/${brandId}/share-of-voice/timeline`),
-  intentCoverage: (brandId: string) => get<IntentRow[]>(`/brands/${brandId}/intent-coverage`),
-  sources: (brandId: string) => get<SourceRow[]>(`/brands/${brandId}/sources`),
-  promptBreakdown: (brandId: string) => get<PromptRow[]>(`/brands/${brandId}/prompt-breakdown`),
-  gaps: (brandId: string) =>
-    get<{ prompt_gaps: PromptRow[]; source_gaps: SourceRow[] }>(`/brands/${brandId}/gaps`),
-  recommend: (brandId: string, token: string) =>
-    post<{ recommendations: string[] }>(`/brands/${brandId}/gaps/recommend`, token),
+  shareOfVoice: (brandId: string, engine: string) =>
+    get<ShareRow[]>(`/brands/${brandId}/share-of-voice?engine=${engine}`),
+  sovTimeline: (brandId: string, engine: string) =>
+    get<SovTimeline>(`/brands/${brandId}/share-of-voice/timeline?engine=${engine}`),
+  intentCoverage: (brandId: string, engine: string) =>
+    get<IntentRow[]>(`/brands/${brandId}/intent-coverage?engine=${engine}`),
+  sources: (brandId: string, engine: string) =>
+    get<SourceRow[]>(`/brands/${brandId}/sources?engine=${engine}`),
+  promptBreakdown: (brandId: string, engine: string) =>
+    get<PromptRow[]>(`/brands/${brandId}/prompt-breakdown?engine=${engine}`),
+  gaps: (brandId: string, engine: string) =>
+    get<{ prompt_gaps: PromptRow[]; source_gaps: SourceRow[] }>(`/brands/${brandId}/gaps?engine=${engine}`),
+  recommend: (brandId: string, engine: string, token: string) =>
+    post<{ recommendations: string[] }>(`/brands/${brandId}/gaps/recommend?engine=${engine}`, token),
 };

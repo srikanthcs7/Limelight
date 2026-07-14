@@ -105,5 +105,14 @@ Full step-by-step (Supabase → Fly → Vercel → live check) is in
 **Phase 1 complete.** Full pipeline runs on OpenAI/ChatGPT end-to-end: prompt
 generation → search-grounded runs → LLM detection → scoring (7/30-day/all) →
 dashboard (trend, share-of-voice, sources, prompt breakdown, gaps + AI
-recommendations) → daily automation. Next: **Phase 2** — Google AI Overviews +
-Gemini adapters behind the same `EngineProvider` interface.
+recommendations) → daily automation.
+
+**Phase 2 in progress** — multi-engine + configurable:
+- [x] **Google AI Overviews** engine via SerpApi (`google_aio`), behind the same `EngineProvider` interface
+- [x] **Configurable per brand**: which engines to track, run frequency (manual/hourly/daily/weekly), location + language — all editable in the UI
+- [x] Frequency-aware scheduler (hourly dispatcher runs only brands that are due)
+- [x] Dashboard filters per engine (ChatGPT ⇄ Google AI Overviews)
+- [ ] Gemini adapter (next)
+
+Every engine satisfies the same interface — adding one is a new adapter + an
+`engines` row, no pipeline changes.

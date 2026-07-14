@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { api } from "../api/client";
+import { api, ENGINE_LABELS } from "../api/client";
 import { VisibilityTrend } from "../charts/VisibilityTrend";
+import { SettingsPanel } from "../components/SettingsPanel";
 import { CompetitorTable } from "../components/CompetitorTable";
 import { SourcesBar } from "../components/SourcesBar";
 import { PromptDrilldown } from "../components/PromptDrilldown";
@@ -21,18 +22,21 @@ export function Dashboard() {
   const [showSettings, setShowSettings] = useState(false);
   const [showPrompts, setShowPrompts] = useState(false);
   const [win, setWin] = useState<"7d" | "30d" | "all">("7d");
+  const [engine, setEngine] = useState<string | null>(null);
 
   const activeBrandId = brandId ?? brandsQ.data?.[0]?.id ?? null;
   const brand = brandsQ.data?.find((b) => b.id === activeBrandId);
+  const engines = brand?.tracked_engines ?? ["openai"];
+  const eng = engine && engines.includes(engine) ? engine : engines[0] ?? "openai";
 
   const scoresQ = useQuery({
-    queryKey: ["scores", activeBrandId],
-    queryFn: () => api.scores(activeBrandId!),
+    queryKey: ["scores", activeBrandId, eng],
+    queryFn: () => api.scores(activeBrandId!, eng),
     enabled: !!activeBrandId,
   });
   const runsQ = useQuery({
-    queryKey: ["runs", activeBrandId],
-    queryFn: () => api.runs(activeBrandId!),
+    queryKey: ["runs", activeBrandId, eng],
+    queryFn: () => api.runs(activeBrandId!, eng),
     enabled: !!activeBrandId,
   });
   const promptsQ = useQuery({
@@ -41,36 +45,36 @@ export function Dashboard() {
     enabled: !!activeBrandId,
   });
   const sovQ = useQuery({
-    queryKey: ["sov", activeBrandId],
-    queryFn: () => api.shareOfVoice(activeBrandId!),
+    queryKey: ["sov", activeBrandId, eng],
+    queryFn: () => api.shareOfVoice(activeBrandId!, eng),
     enabled: !!activeBrandId,
   });
   const sourcesQ = useQuery({
-    queryKey: ["sources", activeBrandId],
-    queryFn: () => api.sources(activeBrandId!),
+    queryKey: ["sources", activeBrandId, eng],
+    queryFn: () => api.sources(activeBrandId!, eng),
     enabled: !!activeBrandId,
   });
   const breakdownQ = useQuery({
-    queryKey: ["breakdown", activeBrandId],
-    queryFn: () => api.promptBreakdown(activeBrandId!),
+    queryKey: ["breakdown", activeBrandId, eng],
+    queryFn: () => api.promptBreakdown(activeBrandId!, eng),
     enabled: !!activeBrandId,
   });
   const gapsQ = useQuery({
-    queryKey: ["gaps", activeBrandId],
-    queryFn: () => api.gaps(activeBrandId!),
+    queryKey: ["gaps", activeBrandId, eng],
+    queryFn: () => api.gaps(activeBrandId!, eng),
     enabled: !!activeBrandId,
   });
   const intentQ = useQuery({
-    queryKey: ["intent", activeBrandId],
-    queryFn: () => api.intentCoverage(activeBrandId!),
+    queryKey: ["intent", activeBrandId, eng],
+    queryFn: () => api.intentCoverage(activeBrandId!, eng),
     enabled: !!activeBrandId,
   });
   const timelineQ = useQuery({
-    queryKey: ["timeline", activeBrandId],
-    queryFn: () => api.sovTimeline(activeBrandId!),
+    queryKey: ["timeline", activeBrandId, eng],
+    queryFn: () => api.sovTimeline(activeBrandId!, eng),
     enabled: !!activeBrandId,
   });
-  const recommendM = useMutation({ mutationFn: () => api.recommend(activeBrandId!, token) });
+  const recommendM = useMutation({ mutationFn: () => api.recommend(activeBrandId!, eng, token) });
 
   const saveToken = (v: string) => {
     setToken(v);
@@ -128,8 +132,22 @@ export function Dashboard() {
           <span className="pill">🔗 {brand.domain}</span>
           {brand.category && <span className="pill">🏷 {brand.category}</span>}
           <span className="pill">💬 {activePrompts} prompts</span>
-          <span className="pill">🤖 ChatGPT</span>
           <span className="pill">🥇 {brand.competitors.length} competitors</span>
+          <span className="pill">⏱ {brand.run_frequency}</span>
+        </div>
+      )}
+
+      {brand && (
+        <div className="engine-tabs">
+          {engines.map((e) => (
+            <button
+              key={e}
+              className={eng === e ? "etab active" : "etab"}
+              onClick={() => setEngine(e)}
+            >
+              {ENGINE_LABELS[e] ?? e}
+            </button>
+          ))}
         </div>
       )}
 
@@ -165,6 +183,7 @@ export function Dashboard() {
             {error && <span className="err">{String((error as Error).message ?? error)}</span>}
             {runM.isSuccess && !busy && <span className="ok">Ran {runM.data.runs} prompt(s).</span>}
           </div>
+          {brand && token && <SettingsPanel brand={brand} token={token} />}
         </div>
       )}
 
