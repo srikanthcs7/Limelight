@@ -394,6 +394,59 @@ select {
   border-radius: 8px;
 }
 
+/* Sentiment strip (under each SoV bar) */
+.sent-strip {
+  display: flex;
+  height: 3px;
+  border-radius: 980px;
+  overflow: hidden;
+  margin-top: 4px;
+  gap: 1px;
+}
+.sent-strip span {
+  display: block;
+  height: 100%;
+}
+.seg-pos {
+  background: var(--good);
+}
+.seg-neu {
+  background: var(--ink-3);
+}
+.seg-neg {
+  background: var(--danger);
+}
+
+/* Intent coverage bars */
+.intent-row {
+  display: grid;
+  grid-template-columns: 110px 1fr 40px;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.intent-name {
+  font-size: 13px;
+  color: var(--ink-2);
+}
+.intent-bar-track {
+  background: var(--surface-2);
+  border-radius: 980px;
+  height: 8px;
+  overflow: hidden;
+}
+.intent-bar {
+  height: 100%;
+  border-radius: 980px;
+  background: var(--accent);
+}
+.intent-val {
+  font-size: 12px;
+  color: var(--ink-3);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
 /* Source bars */
 .src-row {
   display: grid;

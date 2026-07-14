@@ -8,6 +8,8 @@ import { PromptDrilldown } from "../components/PromptDrilldown";
 import { GapList } from "../components/GapList";
 import { CoverageRing } from "../components/CoverageRing";
 import { PromptsModal } from "../components/PromptsModal";
+import { IntentCoverage } from "../components/IntentCoverage";
+import { ShareTrend } from "../charts/ShareTrend";
 
 export function Dashboard() {
   const qc = useQueryClient();
@@ -58,6 +60,16 @@ export function Dashboard() {
     queryFn: () => api.gaps(activeBrandId!),
     enabled: !!activeBrandId,
   });
+  const intentQ = useQuery({
+    queryKey: ["intent", activeBrandId],
+    queryFn: () => api.intentCoverage(activeBrandId!),
+    enabled: !!activeBrandId,
+  });
+  const timelineQ = useQuery({
+    queryKey: ["timeline", activeBrandId],
+    queryFn: () => api.sovTimeline(activeBrandId!),
+    enabled: !!activeBrandId,
+  });
   const recommendM = useMutation({ mutationFn: () => api.recommend(activeBrandId!, token) });
 
   const saveToken = (v: string) => {
@@ -66,7 +78,7 @@ export function Dashboard() {
   };
 
   const refresh = () => {
-    for (const k of ["runs", "scores", "prompts", "sov", "sources", "breakdown", "gaps"]) {
+    for (const k of ["runs", "scores", "prompts", "sov", "sources", "breakdown", "gaps", "intent", "timeline"]) {
       qc.invalidateQueries({ queryKey: [k, activeBrandId] });
     }
   };
@@ -200,6 +212,11 @@ export function Dashboard() {
         <VisibilityTrend scores={windowScores} />
       </div>
 
+      <div className="card">
+        <h2>Share of voice over time</h2>
+        <ShareTrend timeline={timelineQ.data ?? { days: [], series: [] }} />
+      </div>
+
       <div className="grid-2">
         <div className="card">
           <h2>Share of voice</h2>
@@ -213,6 +230,11 @@ export function Dashboard() {
             <SourcesBar rows={sourcesQ.data ?? []} />
           </div>
         </div>
+      </div>
+
+      <div className="card">
+        <h2>Coverage by intent</h2>
+        <IntentCoverage rows={intentQ.data ?? []} />
       </div>
 
       <div className="card">

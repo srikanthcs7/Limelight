@@ -95,6 +95,21 @@ export interface ShareRow {
   is_tracked_brand: boolean;
   mentions: number;
   share: number;
+  positive: number;
+  neutral: number;
+  negative: number;
+}
+
+export interface IntentRow {
+  intent_type: string;
+  total: number;
+  mentioned: number;
+  coverage: number;
+}
+
+export interface SovTimeline {
+  days: string[];
+  series: { name: string; is_tracked_brand: boolean; points: number[] }[];
 }
 
 export interface SourceRow {
@@ -129,6 +144,8 @@ export const api = {
   generatePrompts: (brandId: string, token: string, target = 10) =>
     post<{ added_prompts: number }>(`/brands/${brandId}/prompts:generate?target=${target}`, token),
   shareOfVoice: (brandId: string) => get<ShareRow[]>(`/brands/${brandId}/share-of-voice`),
+  sovTimeline: (brandId: string) => get<SovTimeline>(`/brands/${brandId}/share-of-voice/timeline`),
+  intentCoverage: (brandId: string) => get<IntentRow[]>(`/brands/${brandId}/intent-coverage`),
   sources: (brandId: string) => get<SourceRow[]>(`/brands/${brandId}/sources`),
   promptBreakdown: (brandId: string) => get<PromptRow[]>(`/brands/${brandId}/prompt-breakdown`),
   gaps: (brandId: string) =>

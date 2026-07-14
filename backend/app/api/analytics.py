@@ -25,3 +25,13 @@ def sources(brand_id: uuid.UUID, limit: int = 15, db: Session = Depends(get_db))
 @router.get("/prompt-breakdown")
 def prompt_breakdown(brand_id: uuid.UUID, db: Session = Depends(get_db)) -> list[dict]:
     return analytics.prompt_breakdown(db, brand_id)
+
+
+@router.get("/intent-coverage")
+def intent_coverage(brand_id: uuid.UUID, db: Session = Depends(get_db)) -> list[dict]:
+    return analytics.intent_coverage(db, brand_id)
+
+
+@router.get("/share-of-voice/timeline")
+def sov_timeline(brand_id: uuid.UUID, db: Session = Depends(get_db)) -> dict:
+    return analytics.sov_timeline(db, brand_id)
