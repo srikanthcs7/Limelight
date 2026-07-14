@@ -23,7 +23,7 @@ from app.models import Brand, Competitor, Prompt
 log = logging.getLogger("limelight.prompt_gen")
 
 INTENT_TYPES = {"best_of", "comparison", "alternatives", "problem_first"}
-DEFAULT_TARGET = 60  # middle of the 40-100 range
+DEFAULT_TARGET = 10  # small first batch; user reviews in a modal and can generate more
 
 
 @dataclass

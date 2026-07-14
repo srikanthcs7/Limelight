@@ -3,9 +3,11 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { VisibilityTrend } from "../charts/VisibilityTrend";
 import { CompetitorTable } from "../components/CompetitorTable";
-import { TopSources } from "../components/TopSources";
+import { SourcesBar } from "../components/SourcesBar";
 import { PromptDrilldown } from "../components/PromptDrilldown";
 import { GapList } from "../components/GapList";
+import { CoverageRing } from "../components/CoverageRing";
+import { PromptsModal } from "../components/PromptsModal";
 
 export function Dashboard() {
   const qc = useQueryClient();
@@ -15,6 +17,7 @@ export function Dashboard() {
     () => localStorage.getItem("limelight_admin_token") ?? "",
   );
   const [showSettings, setShowSettings] = useState(false);
+  const [showPrompts, setShowPrompts] = useState(false);
   const [win, setWin] = useState<"7d" | "30d" | "all">("7d");
 
   const activeBrandId = brandId ?? brandsQ.data?.[0]?.id ?? null;
@@ -73,19 +76,17 @@ export function Dashboard() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["brands"] }),
   });
   const runM = useMutation({ mutationFn: () => api.triggerRun(activeBrandId!, token), onSuccess: refresh });
-  const genM = useMutation({
-    mutationFn: () => api.generatePrompts(activeBrandId!, token),
-    onSuccess: refresh,
-  });
 
   const windowScores = (scoresQ.data ?? [])
     .filter((s) => s.window_label === win)
     .sort((a, b) => a.window_end.localeCompare(b.window_end));
   const latest = windowScores[windowScores.length - 1];
   const noBrands = brandsQ.data && brandsQ.data.length === 0;
-  const busy = seedM.isPending || runM.isPending || genM.isPending;
-  const error = seedM.error ?? runM.error ?? genM.error;
+  const busy = seedM.isPending || runM.isPending;
+  const error = seedM.error ?? runM.error;
   const activePrompts = promptsQ.data?.filter((p) => p.active).length ?? 0;
+  const breakdown = breakdownQ.data ?? [];
+  const mentionedCount = breakdown.filter((r) => r.brand_mentioned).length;
 
   return (
     <div className="container">
@@ -142,20 +143,21 @@ export function Dashboard() {
                 </button>
                 <button
                   className="btn secondary"
-                  disabled={!token || busy}
-                  onClick={() => genM.mutate()}
+                  disabled={!token}
+                  onClick={() => setShowPrompts(true)}
                 >
-                  {genM.isPending ? "Generating…" : "Generate prompts"}
+                  Manage prompts
                 </button>
               </>
             )}
             {error && <span className="err">{String((error as Error).message ?? error)}</span>}
             {runM.isSuccess && !busy && <span className="ok">Ran {runM.data.runs} prompt(s).</span>}
-            {genM.isSuccess && !busy && (
-              <span className="ok">Added {genM.data.added_prompts} prompts.</span>
-            )}
           </div>
         </div>
+      )}
+
+      {showPrompts && activeBrandId && (
+        <PromptsModal brandId={activeBrandId} token={token} onClose={() => setShowPrompts(false)} />
       )}
 
       <div className="card">
@@ -201,11 +203,15 @@ export function Dashboard() {
       <div className="grid-2">
         <div className="card">
           <h2>Share of voice</h2>
-          <CompetitorTable rows={sovQ.data ?? []} />
+          <div className="scroll-box">
+            <CompetitorTable rows={sovQ.data ?? []} />
+          </div>
         </div>
         <div className="card">
           <h2>Top cited sources</h2>
-          <TopSources rows={sourcesQ.data ?? []} />
+          <div className="scroll-box">
+            <SourcesBar rows={sourcesQ.data ?? []} />
+          </div>
         </div>
       </div>
 
@@ -226,8 +232,13 @@ export function Dashboard() {
       </div>
 
       <div className="card">
-        <h2>Prompt breakdown</h2>
-        <PromptDrilldown rows={breakdownQ.data ?? []} />
+        <div className="card-head">
+          <h2>Prompt breakdown</h2>
+          {breakdown.length > 0 && <CoverageRing mentioned={mentionedCount} total={breakdown.length} />}
+        </div>
+        <div className="scroll-box tall">
+          <PromptDrilldown rows={breakdown} />
+        </div>
       </div>
 
       <div className="card">

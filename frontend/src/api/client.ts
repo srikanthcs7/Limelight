@@ -59,10 +59,14 @@ async function get<T>(path: string): Promise<T> {
   return res.json() as Promise<T>;
 }
 
-async function post<T>(path: string, token: string): Promise<T> {
+async function send<T>(method: string, path: string, token: string, body?: unknown): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
-    method: "POST",
-    headers: { "X-Admin-Token": token },
+    method,
+    headers: {
+      "X-Admin-Token": token,
+      ...(body !== undefined ? { "Content-Type": "application/json" } : {}),
+    },
+    body: body !== undefined ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) {
     let detail = `${res.status} ${res.statusText}`;
@@ -75,6 +79,8 @@ async function post<T>(path: string, token: string): Promise<T> {
   }
   return res.json() as Promise<T>;
 }
+
+const post = <T>(path: string, token: string) => send<T>("POST", path, token);
 
 export interface Prompt {
   id: string;
@@ -111,12 +117,17 @@ export const api = {
   brands: () => get<Brand[]>("/brands"),
   runs: (brandId: string) => get<Run[]>(`/brands/${brandId}/runs`),
   scores: (brandId: string) => get<Score[]>(`/brands/${brandId}/scores`),
-  prompts: (brandId: string) => get<Prompt[]>(`/brands/${brandId}/prompts`),
+  prompts: (brandId: string, activeOnly = false) =>
+    get<Prompt[]>(`/brands/${brandId}/prompts${activeOnly ? "?active_only=true" : ""}`),
+  updatePrompt: (brandId: string, promptId: string, body: { text?: string; active?: boolean }, token: string) =>
+    send<Prompt>("PATCH", `/brands/${brandId}/prompts/${promptId}`, token, body),
+  deletePrompt: (brandId: string, promptId: string, token: string) =>
+    send<{ deleted: boolean }>("DELETE", `/brands/${brandId}/prompts/${promptId}`, token),
   seed: (token: string) => post<{ brand_id: string; display_name: string }>("/admin/seed", token),
   triggerRun: (brandId: string, token: string) =>
     post<{ runs: number }>(`/brands/${brandId}/runs`, token),
-  generatePrompts: (brandId: string, token: string) =>
-    post<{ added_prompts: number }>(`/brands/${brandId}/prompts:generate`, token),
+  generatePrompts: (brandId: string, token: string, target = 10) =>
+    post<{ added_prompts: number }>(`/brands/${brandId}/prompts:generate?target=${target}`, token),
   shareOfVoice: (brandId: string) => get<ShareRow[]>(`/brands/${brandId}/share-of-voice`),
   sources: (brandId: string) => get<SourceRow[]>(`/brands/${brandId}/sources`),
   promptBreakdown: (brandId: string) => get<PromptRow[]>(`/brands/${brandId}/prompt-breakdown`),

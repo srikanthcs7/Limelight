@@ -100,7 +100,7 @@ def run_brand(brand_id: str, use_async: bool = typer.Option(False, "--async")) -
 
 
 @app.command("gen-prompts")
-def gen_prompts(brand_id: str, target: int = 60) -> None:
+def gen_prompts(brand_id: str, target: int = 10) -> None:
     """Scrape the brand's domain and generate buyer prompts across intent types."""
     from app.pipeline.prompt_gen import generate_for_brand
 
